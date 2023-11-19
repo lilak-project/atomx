@@ -1,0 +1,34 @@
+# geant4 visualization macro
+
+LKG4Manager/
+    VisMode true
+    G4InputFile proton_ran15.gen
+    G4OutputFile data/tpc_sim_vis.root
+    SuppressG4InitMessage true
+
+persistency/
+    MCTrackVertex true
+    MCSecondary false
+    MCEdepSum false
+    MCStep false
+
+G4/
+    vis/open OGL 600x600-0+0
+    #vis/scene/add/axes 0 0 0 100 mm
+    vis/viewer/flush
+    vis/viewer/set/lightsVector -1 0 0
+    vis/viewer/set/style wireframe
+    vis/viewer/set/auxiliaryEdge true
+    vis/viewer/set/lineSegmentsPerCircle 100
+    vis/scene/add/trajectories smooth
+    vis/modeling/trajectories/create/drawByCharge
+    vis/modeling/trajectories/drawByCharge-0/default/setDrawStepPts true
+    vis/modeling/trajectories/drawByCharge-0/default/setStepPtsSize 2
+    vis/scene/endOfEventAction accumulate
+    vis/geometry/set/visibility World 0 false
+    vis/viewer/set/viewpointThetaPhi 100 160
+    vis/viewer/set/autoRefresh true
+    tracking/verbose 1
+    vis/verbose warnings
+    run/setCutForAGivenParticle e- 100. mm
+    run/beamOn 1

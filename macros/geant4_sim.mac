@@ -1,0 +1,19 @@
+# geant4 run macro
+
+LKG4Manager/
+    VisMode false
+    G4InputFile proton_ran15.gen
+    G4OutputFile data/tpc_sim.root
+    SuppressG4InitMessage true
+
+persistency/
+    MCTrackVertex true
+    MCSecondary false
+    MCEdepSum false
+    MCStep false
+
+G4/
+    run/setCutForAGivenParticle e- 500. mm
+    run/suppressPP true
+    run/beamOn 1
+    #run/beamOnAll
