@@ -118,25 +118,57 @@ def plot_3d_vectors(v1, v2, v3):
 numEvents = 100000
 numTracks = 1
 pdg = 2212
-energy1 = 8
-energy2 = 15
 
-with open("data/proton_ran15.gen","w") as file1:
-    print("e",file=file1)
-    print(numEvents,file=file1)
-    for eventID in range(numEvents):
-        if eventID%100==0: print(f"event {eventID}")
-        p1 = [0,0,random.uniform(energy1,energy2)]
-        vx, vy, vz = 0, 0, -500
-        print(f"{eventID} {numTracks} {vx} {vy} {vz:.4f}",file=file1)
-        print(f"{pdg} {p1[0]:.8f} {p1[1]:.8f} {p1[2]:.8f}",file=file1)
+file_submit = open(f"submit_all.sh","w")
+for proton_energy in range(9,24+1):
+
+    gen_file_name = f"input/proton_energy{proton_energy}.gen"
+    with open(gen_file_name,"w") as file1:
+        print("e",file=file1)
+        print(numEvents,file=file1)
+        for eventID in range(numEvents):
+            if eventID%10000==0: print(f"energy={proton_energy} event={eventID}")
+            p1 = [0,0,proton_energy]
+            vx, vy, vz = 0, 0, -500
+            print(f"{eventID} {numTracks} {vx} {vy} {vz:.4f}",file=file1)
+            print(f"{pdg} {p1[0]:.8f} {p1[1]:.8f} {p1[2]:.8f}",file=file1)
+
+    #for degrader_thickness in [0.05,0.1,0.15,0.2]:
+    for degrader_thickness in [0.08]:
+        out_file_name = f"data/proton_sim_e{proton_energy}_d{degrader_thickness}.root"
+        mac_file_name = f"input/geant4_sim_e{proton_energy}_d{degrader_thickness}.mac"
+        with open(mac_file_name,"w") as file1:
+            content = f"""#
+atomx/degraderThickness {degrader_thickness} # mm
+
+LKG4Manager/
+    VisMode false
+    G4InputFile {gen_file_name}
+    G4OutputFile {out_file_name}
+    SuppressG4InitMessage true
+
+persistency/
+    MCTrackVertex true
+    MCSecondary false
+    MCEdepSum false
+    MCStep false
+
+G4/
+    run/setCutForAGivenParticle e- 500. mm
+    run/suppressPP true
+    run/beamOnAll
+"""
+            print(content,file=file1)
+            print(f"./run_sim.exe {mac_file_name}",file=file_submit)
+
+exit()
 
 numEvents = 1000
 numTracks = 3
 pdg = 1000020040
 energy = 0.125
 
-with open("data/triple_alpha.gen","w") as file1:
+with open("input/triple_alpha.gen","w") as file1:
     print("e",file=file1)
     print(numEvents,file=file1)
     for eventID in range(numEvents):
