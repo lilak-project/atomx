@@ -2,9 +2,11 @@
 
 LKG4Manager/
     VisMode true
-    G4InputFile proton_ran15.gen
+    G4InputFile data/proton_ran15.gen
     G4OutputFile data/tpc_sim_vis.root
     SuppressG4InitMessage true
+
+atomx/degraderThickness 0.1 # mm
 
 persistency/
     MCTrackVertex true
@@ -15,6 +17,7 @@ persistency/
 G4/
     vis/open OGL 600x600-0+0
     #vis/scene/add/axes 0 0 0 100 mm
+    /vis/drawVolume
     vis/viewer/flush
     vis/viewer/set/lightsVector -1 0 0
     vis/viewer/set/style wireframe

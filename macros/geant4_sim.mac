@@ -2,7 +2,7 @@
 
 LKG4Manager/
     VisMode false
-    G4InputFile proton_ran15.gen
+    G4InputFile data/proton_ran15.gen
     G4OutputFile data/tpc_sim.root
     SuppressG4InitMessage true
 

@@ -14,6 +14,7 @@ int main(int argc, char** argv)
     runManager -> SetUserInitialization(physicsList);
     runManager -> AddParameterContainer(argv[1]);
     runManager -> SetUserInitialization(new ATDetectorConstruction());
+    runManager -> Initialize();
     runManager -> Run(argc, argv);
 
     delete runManager;

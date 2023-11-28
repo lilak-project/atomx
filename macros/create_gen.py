@@ -127,7 +127,7 @@ with open("data/proton_ran15.gen","w") as file1:
     for eventID in range(numEvents):
         if eventID%100==0: print(f"event {eventID}")
         p1 = [0,0,random.uniform(energy1,energy2)]
-        vx, vy, vz = 0, 0, -100
+        vx, vy, vz = 0, 0, -500
         print(f"{eventID} {numTracks} {vx} {vy} {vz:.4f}",file=file1)
         print(f"{pdg} {p1[0]:.8f} {p1[1]:.8f} {p1[2]:.8f}",file=file1)
 
