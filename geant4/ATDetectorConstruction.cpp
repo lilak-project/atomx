@@ -50,9 +50,11 @@ G4VPhysicalVolume* ATDetectorConstruction::Construct()
     logicAtomx -> SetUserLimits(new G4UserLimits(1.*mm));
     auto pvpAtomx = new G4PVPlacement(0, G4ThreeVector(0,0,tpcZOffset), logicAtomx, "atomx", logicWorld, false, detectorNo=1, true);
 
-    auto solidDegrader = new G4Box("degrader", 0.5*degraderSize.x(), 0.5*degraderSize.y(), 0.5*degraderSize.z());
-    auto logicDegrader = new G4LogicalVolume(solidDegrader, matAl, "degrader");
-    auto pvpDegrader = new G4PVPlacement(0, G4ThreeVector(0,0,degraderOffset), logicDegrader, "degrader", logicWorld, false, detectorNo=2, true);
+    if (degraderSize.z()>0) {
+        auto solidDegrader = new G4Box("degrader", 0.5*degraderSize.x(), 0.5*degraderSize.y(), 0.5*degraderSize.z());
+        auto logicDegrader = new G4LogicalVolume(solidDegrader, matAl, "degrader");
+        auto pvpDegrader = new G4PVPlacement(0, G4ThreeVector(0,0,degraderOffset), logicDegrader, "degrader", logicWorld, false, detectorNo=2, true);
+    }
 
     // Register to LKG4RunManager
     runManager -> SetSensitiveDetector(pvpAtomx);

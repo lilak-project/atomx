@@ -2,7 +2,7 @@
 
 LKG4Manager/
     VisMode false
-    G4InputFile data/proton_ran15.gen
+    G4InputFile proton_energy20.gen
     G4OutputFile data/tpc_sim.root
     SuppressG4InitMessage true
 
@@ -15,5 +15,4 @@ persistency/
 G4/
     run/setCutForAGivenParticle e- 500. mm
     run/suppressPP true
-    run/beamOn 1
-    #run/beamOnAll
+    run/beamOnAll
