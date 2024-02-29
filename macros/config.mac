@@ -1,6 +1,6 @@
 runNo 13
-runNo 1
+division 1
 
-LKMFMConversionTask/InputFileName data
+LKMFMConversionTask/InputFileName pathToData
 
 *LKRun/RunName atomx {runNo} {division} conv
