@@ -1,0 +1,4 @@
+LKEveTask/drawEve3D     true
+LKEveTask/drawPlane     true
+ATMicromegas/Mapping    {lilak_common}/atomx_micromegas_mapping_v3_chan.txt # cobo asad aget chan x y");
+ATMicromegas/fDefinePositionByPixelIndex    true

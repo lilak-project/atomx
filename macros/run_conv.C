@@ -1,10 +1,10 @@
-void run_mfm()
+void run_conv()
 {
     auto run = new LKRun();
-
-    run -> AddPar("config.mac");
+    run -> AddPar("config_conv.mac");
     run -> SetEventTrigger(new LKMFMConversionTask());
+    //run -> InitAndCollectParameters();
     run -> Init();
-    run -> SetEventCountForMessage(1);
+    run -> Print();
     run -> Run();
 }
