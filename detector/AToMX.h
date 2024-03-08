@@ -18,11 +18,12 @@ class AToMX : public LKDetector
         AToMX();
         virtual ~AToMX() { ; }
 
-        void Print(Option_t *option="") const;
-        bool Init();
-        bool BuildGeometry();
-        bool BuildDetectorPlane();
-        bool IsInBoundary(Double_t x, Double_t y, Double_t z);
+        virtual void Print(Option_t *option="") const;
+        virtual bool Init();
+        virtual bool BuildGeometry();
+        virtual bool BuildDetectorPlane();
+        virtual bool IsInBoundary(Double_t x, Double_t y, Double_t z);
+        virtual bool GetEffectiveDimension(Double_t &x1, Double_t &y1, Double_t &z1, Double_t &x2, Double_t &y2, Double_t &z2);
 
     ClassDef(AToMX,1);
 };
