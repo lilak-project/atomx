@@ -1,14 +1,15 @@
 LKRun/Name           atomx  # name of the run
-LKRun/RunID          44     #
+LKRun/RunID          58     #
 LKRun/Division       0      # division within the run [optional]
 *LKRun/Tag           conv   # tag (*: temporary parameter)
-LKRun/DataPath       /root/lilak/atomx/macros/data/
+LKRun/DataPath       /home/ejungwoo/lilak/atomx/macros/data/
+raw_data             /home/ejungwoo/data/atomx/run_0058.dat.28-02-24_11h26m56s
 
 persistency/FrameHeader true
 persistency/RawData     true
 
 ########################################################################
-LKMFMConversionTask/InputFileName   data/run_0044.dat.28-02-24_04h55m12s
+LKMFMConversionTask/InputFileName   {raw_data}
 LKFrameBuilder/MaxCobo              4   # maximum number of CoBo
 LKFrameBuilder/MaxAsad              4   # maximum number of AsAd in one CoBo
 LKFrameBuilder/MaxAget              4   # maximum number of AGET in one AsAd

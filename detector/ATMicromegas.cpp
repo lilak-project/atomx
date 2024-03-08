@@ -39,7 +39,7 @@ bool ATMicromegas::Init()
     fPar -> UpdatePar(fMappingFileName,"ATMicromegas/Mapping {lilak_common}/atomx_micromegas_mapping.txt # cobo asad aget chan x y");
     fPar -> UpdatePar(fDefinePositionByPixelIndex,"ATMicromegas/fDefinePositionByPixelIndex false");
 
-    gStyle -> SetPalette(kRainbow);
+    gStyle -> SetPalette(kRainBow);
     gStyle -> SetNumberContours(99);
 
     fMapCAACToPadID = new int***[fNumCobo];
