@@ -99,8 +99,9 @@ class ATMicromegas : public LKDetectorPlane, public LKPadInteractive
 
         TGraph* fGSel2DEvent = nullptr;
 
+        int fBinCtrlZZZZZZZ;
         int fBinCtrlEngyMax;
-        int fBinCtrl4200Max;
+        int fBinCtrlAcmltEv;
         int fBinCtrlFitChan;
         int fBinCtrlAcmltCh;
         int fBinCtrlNEEL500; ///< Next Event with Energy Larger than > 500
@@ -109,6 +110,7 @@ class ATMicromegas : public LKDetectorPlane, public LKPadInteractive
         int fBinCtrlFrst;
         int fBinCtrlPr50;
         int fBinCtrlPrev;
+        int fBinCtrlCurr;
         int fBinCtrlNext;
         int fBinCtrlNe50;
         int fBinCtrlLast;
@@ -118,6 +120,9 @@ class ATMicromegas : public LKDetectorPlane, public LKPadInteractive
 
         int fEnergyMaxMode = 0;
         bool fFitChannel = false;
+        Long64_t fAccumulateEvents = 0;
+        Long64_t fAccumulateEvent1 = 0;
+        Long64_t fAccumulateEvent2 = 0;
         bool fAccumulateChannel = false;
         TClonesArray *fChannelGraphArray = nullptr;
         int fCountChannelGraph = 0;

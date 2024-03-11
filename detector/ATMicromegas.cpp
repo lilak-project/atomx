@@ -312,6 +312,7 @@ void ATMicromegas::UpdateCtrlEv1()
         auto lastEventID = fRun -> GetNumEvents() - 1;
         fHistCtrlEv1 -> SetBinContent(fBinCtrlPr50, (currentEventID-50<0?0:currentEventID-50));
         fHistCtrlEv1 -> SetBinContent(fBinCtrlPrev, (currentEventID==0?0:currentEventID-1));
+        fHistCtrlEv1 -> SetBinContent(fBinCtrlCurr, currentEventID);
         fHistCtrlEv1 -> SetBinContent(fBinCtrlNext, (currentEventID==lastEventID?lastEventID:currentEventID+1));
         fHistCtrlEv1 -> SetBinContent(fBinCtrlNe50, (currentEventID+50>lastEventID?lastEventID:currentEventID+50));
         fHistCtrlEv1 -> Draw("col text");
@@ -430,14 +431,15 @@ TH2* ATMicromegas::GetHist(Option_t *option)
         double binTextSize = 6.0;
         double ctrlLabelSize = 0.20;
 
-        fHistCtrlEv1 = new TH2D("ATMicromegas_CtrlEv1","",6,0,6,1,0,1);
+        fHistCtrlEv1 = new TH2D("ATMicromegas_CtrlEv1","",7,0,7,1,0,1);
         fHistCtrlEv1 -> SetStats(0);
         fBinCtrlFrst = fHistCtrlEv1 -> GetBin(1,1);
         fBinCtrlPr50 = fHistCtrlEv1 -> GetBin(2,1);
         fBinCtrlPrev = fHistCtrlEv1 -> GetBin(3,1);
-        fBinCtrlNext = fHistCtrlEv1 -> GetBin(4,1);
-        fBinCtrlNe50 = fHistCtrlEv1 -> GetBin(5,1);
-        fBinCtrlLast = fHistCtrlEv1 -> GetBin(6,1);
+        fBinCtrlCurr = fHistCtrlEv1 -> GetBin(4,1);
+        fBinCtrlNext = fHistCtrlEv1 -> GetBin(5,1);
+        fBinCtrlNe50 = fHistCtrlEv1 -> GetBin(6,1);
+        fBinCtrlLast = fHistCtrlEv1 -> GetBin(7,1);
         fHistCtrlEv1 -> GetXaxis() -> SetTickSize(0);
         fHistCtrlEv1 -> GetYaxis() -> SetTickSize(0);
         fHistCtrlEv1 -> GetYaxis() -> SetBinLabel(1,"");
@@ -445,9 +447,10 @@ TH2* ATMicromegas::GetHist(Option_t *option)
         fHistCtrlEv1 -> GetXaxis() -> SetBinLabel(1,"First");
         fHistCtrlEv1 -> GetXaxis() -> SetBinLabel(2,"-50");
         fHistCtrlEv1 -> GetXaxis() -> SetBinLabel(3,"Prev.");
-        fHistCtrlEv1 -> GetXaxis() -> SetBinLabel(4,"Next");
-        fHistCtrlEv1 -> GetXaxis() -> SetBinLabel(5,"+50");
-        fHistCtrlEv1 -> GetXaxis() -> SetBinLabel(6,"Last");
+        fHistCtrlEv1 -> GetXaxis() -> SetBinLabel(4,"Current");
+        fHistCtrlEv1 -> GetXaxis() -> SetBinLabel(5,"Next");
+        fHistCtrlEv1 -> GetXaxis() -> SetBinLabel(6,"+50");
+        fHistCtrlEv1 -> GetXaxis() -> SetBinLabel(7,"Last");
         fHistCtrlEv1 -> SetBinContent(fBinCtrlFrst,0);
         if (fRun!=nullptr)
             fHistCtrlEv1 -> SetBinContent(fBinCtrlLast,fRun->GetNumEvents()-1);
@@ -457,26 +460,29 @@ TH2* ATMicromegas::GetHist(Option_t *option)
         fHistCtrlEv1 -> SetMarkerSize(binTextSize);
         fHistCtrlEv1 -> SetMinimum(0);
 
-        fHistCtrlEv2 = new TH2D("ATMicromegas_CtrlEv2","",6,0,6,1,0,1);
+        fHistCtrlEv2 = new TH2D("ATMicromegas_CtrlEv2","",7,0,7,1,0,1);
         fHistCtrlEv2 -> SetStats(0);
-        fBinCtrlEngyMax = fHistCtrlEv2 -> GetBin(1,1);
-        fBinCtrl4200Max = fHistCtrlEv2 -> GetBin(2,1);
-        fBinCtrlAcmltCh = fHistCtrlEv2 -> GetBin(3,1);
-        fBinCtrlFitChan = fHistCtrlEv2 -> GetBin(4,1);
-        fBinCtrlNEEL500 = fHistCtrlEv2 -> GetBin(5,1);
-        fBinCtrlNEEL203 = fHistCtrlEv2 -> GetBin(6,1);
+        fBinCtrlZZZZZZZ = fHistCtrlEv2 -> GetBin(1,1);
+        fBinCtrlEngyMax = fHistCtrlEv2 -> GetBin(2,1);
+        fBinCtrlAcmltEv = fHistCtrlEv2 -> GetBin(3,1);
+        fBinCtrlAcmltCh = fHistCtrlEv2 -> GetBin(4,1);
+        fBinCtrlFitChan = fHistCtrlEv2 -> GetBin(5,1);
+        fBinCtrlNEEL500 = fHistCtrlEv2 -> GetBin(6,1);
+        fBinCtrlNEEL203 = fHistCtrlEv2 -> GetBin(7,1);
         fHistCtrlEv2 -> GetXaxis() -> SetTickSize(0);
         fHistCtrlEv2 -> GetYaxis() -> SetTickSize(0);
         fHistCtrlEv2 -> GetYaxis() -> SetBinLabel(1,"");
         fHistCtrlEv2 -> GetXaxis() -> SetLabelSize(ctrlLabelSize);
-        fHistCtrlEv2 -> GetXaxis() -> SetBinLabel(1,"E(3)");  // fBinCtrlEngyMax
-        //fHistCtrlEv2 -> GetXaxis() -> SetBinLabel(2,"E2=4096");  // fBinCtrl4200Max
-        fHistCtrlEv2 -> GetXaxis() -> SetBinLabel(3,"Acc Ch.");  // fBinCtrlAcmltCh
-        fHistCtrlEv2 -> GetXaxis() -> SetBinLabel(4,"Fit Ch.");  // fBinCtrlFitChan
-        fHistCtrlEv2 -> GetXaxis() -> SetBinLabel(5,"@E>=500");  // fBinCtrlNEEL500
-        fHistCtrlEv2 -> GetXaxis() -> SetBinLabel(6,"@E>=2000"); // fBinCtrlNEEL203
+        fHistCtrlEv2 -> GetXaxis() -> SetBinLabel(0,"");
+        fHistCtrlEv2 -> GetXaxis() -> SetBinLabel(2,"E_{max}");  // fBinCtrlEngyMax
+        fHistCtrlEv2 -> GetXaxis() -> SetBinLabel(3,"++Event");  // fBinCtrlAcmltEv
+        fHistCtrlEv2 -> GetXaxis() -> SetBinLabel(4,"++Channel");// fBinCtrlAcmltCh
+        fHistCtrlEv2 -> GetXaxis() -> SetBinLabel(5,"Fit Ch.");  // fBinCtrlFitChan
+        fHistCtrlEv2 -> GetXaxis() -> SetBinLabel(6,"@E>=500");  // fBinCtrlNEEL500
+        fHistCtrlEv2 -> GetXaxis() -> SetBinLabel(7,"@E>=2000"); // fBinCtrlNEEL203
+        fHistCtrlEv2 -> SetBinContent(fBinCtrlZZZZZZZ, 0);
         fHistCtrlEv2 -> SetBinContent(fBinCtrlEngyMax, 1);
-        //fHistCtrlEv2 -> SetBinContent(fBinCtrl4200Max, 4096);
+        fHistCtrlEv2 -> SetBinContent(fBinCtrlAcmltEv, 0);
         fHistCtrlEv2 -> SetBinContent(fBinCtrlAcmltCh, 0);
         fHistCtrlEv2 -> SetBinContent(fBinCtrlFitChan, 1);
         fHistCtrlEv2 -> SetBinContent(fBinCtrlNEEL500, 500);
@@ -572,7 +578,8 @@ void ATMicromegas::DriftElectronBack(int padID, double tb, TVector3 &posReco, do
 void ATMicromegas::FillDataToHist(Option_t* option)
 {
     GetHist();
-    fHist2DEvent -> Reset();
+    if (fAccumulateEvents==0)
+        fHist2DEvent -> Reset();
 
     TString optionString(option);
     optionString.ToLower();
@@ -582,8 +589,8 @@ void ATMicromegas::FillDataToHist(Option_t* option)
     TString title;
 
     if (optionString.Index("caac")>=0) {
-        lk_info << "Filling caac to plane" << endl;
-        title = ("caac");
+        if (fAccumulateEvents==0) lk_info << "Filling caac to plane" << endl;
+        title = "caac";
         int maxCAAC = 0;
         while ((pad = (LKPhysicalPad *) next())) {
             auto caac = pad -> GetCAAC();
@@ -594,79 +601,79 @@ void ATMicromegas::FillDataToHist(Option_t* option)
     }
     else if (optionString.Index("cobo")>=0) {
         fEnergyMaxMode = 4;
-        lk_info << "Filling cobo to plane" << endl;
-        title = ("cobo");
+        if (fAccumulateEvents==0) lk_info << "Filling cobo to plane" << endl;
+        title = "cobo";
         while ((pad = (LKPhysicalPad *) next()))
             fHist2DEvent -> Fill(pad->GetI(),pad->GetJ(),pad->GetCoboID());
     }
     else if (optionString.Index("asad")>=0) {
         fEnergyMaxMode = 4;
-        lk_info << "Filling asad to plane" << endl;
-        title = ("asad");
+        if (fAccumulateEvents==0) lk_info << "Filling asad to plane" << endl;
+        title = "asad";
         while ((pad = (LKPhysicalPad *) next()))
             fHist2DEvent -> Fill(pad->GetI(),pad->GetJ(),pad->GetAsadID());
     }
     else if (optionString.Index("aget")>=0) {
         fEnergyMaxMode = 4;
-        lk_info << "Filling aget to plane" << endl;
-        title = ("aget");
+        if (fAccumulateEvents==0) lk_info << "Filling aget to plane" << endl;
+        title = "aget";
         while ((pad = (LKPhysicalPad *) next()))
             fHist2DEvent -> Fill(pad->GetI(),pad->GetJ(),pad->GetAgetID());
     }
     else if (optionString.Index("chan")>=0) {
         fEnergyMaxMode = 70;
-        lk_info << "Filling chan to plane" << endl;
-        title = ("chan");
+        if (fAccumulateEvents==0) lk_info << "Filling chan to plane" << endl;
+        title = "chan";
         while ((pad = (LKPhysicalPad *) next()))
             fHist2DEvent -> Fill(pad->GetI(),pad->GetJ(),pad->GetChannelID());
     }
 
     else if (optionString.Index("section")>=0) {
         fEnergyMaxMode = 100;
-        lk_info << "Filling section to plane" << endl;
-        title = ("section");
+        if (fAccumulateEvents==0) lk_info << "Filling section to plane" << endl;
+        title = "section";
         while ((pad = (LKPhysicalPad *) next()))
             fHist2DEvent -> Fill(pad->GetI(),pad->GetJ(),pad->GetSection());
     }
     else if (optionString.Index("layer")>=0) {
         fEnergyMaxMode = 100;
-        lk_info << "Filling layer to plane" << endl;
-        title = ("layer");
+        if (fAccumulateEvents==0) lk_info << "Filling layer to plane" << endl;
+        title = "layer";
         while ((pad = (LKPhysicalPad *) next()))
             fHist2DEvent -> Fill(pad->GetI(),pad->GetJ(),pad->GetLayer());
     }
     else if (optionString.Index("row")>=0) {
         fEnergyMaxMode = 100;
-        lk_info << "Filling row to plane" << endl;
-        title = ("raw");
+        if (fAccumulateEvents==0) lk_info << "Filling row to plane" << endl;
+        title = "raw";
         while ((pad = (LKPhysicalPad *) next()))
             fHist2DEvent -> Fill(pad->GetI(),pad->GetJ(),pad->GetRow());
     }
 
     else if (optionString.Index("padid")>=0) {
         fEnergyMaxMode = 100;
-        lk_info << "Filling pad id to plane" << endl;
-        title = ("id");
+        if (fAccumulateEvents==0) lk_info << "Filling pad id to plane" << endl;
+        title = "id";
         while ((pad = (LKPhysicalPad *) next()))
             fHist2DEvent -> Fill(pad->GetI(),pad->GetJ(),pad->GetPadID());
     }
     else if (optionString.Index("nhit")>=0) {
         fEnergyMaxMode = 10;
-        lk_info << "Filling number of hits to plane" << endl;
-        title = ("nhit");
+        if (fAccumulateEvents==0) lk_info << "Filling number of hits to plane" << endl;
+        title = "nhit";
         while ((pad = (LKPhysicalPad *) next()))
             fHist2DEvent -> Fill(pad->GetI(),pad->GetJ(),pad->GetNumHits());
     }
 
     else if (fRawDataArray!=nullptr)
     {
-        lk_info << "Filling raw data to plane" << endl;
-        title = ("Raw Data");
+        if (fAccumulateEvents==0) lk_info << "Filling raw data to plane" << endl;
+        title = "Raw Data";
         while (pad = (LKPhysicalPad*) next())
         {
             auto idx = pad -> GetDataIndex();
             if (idx<0)
-                continue;;
+                continue;
             auto channel = (GETChannel*) fRawDataArray -> At(idx);
             auto i = pad -> GetI();
             auto j = pad -> GetJ();
@@ -675,8 +682,12 @@ void ATMicromegas::FillDataToHist(Option_t* option)
         }
     }
 
-    if (fRun!=nullptr)
-        fHist2DEvent -> SetTitle(Form("%s (event %lld)", fRun->GetInputFile()->GetName(), fRun->GetCurrentEventID()));
+    if (fRun!=nullptr) {
+        if (fAccumulateEvents==0)
+            fHist2DEvent -> SetTitle(Form("%s (event %lld)", fRun->GetInputFile()->GetName(), fRun->GetCurrentEventID()));
+        else
+            fHist2DEvent -> SetTitle(Form("%s (event %lld - %lld)", fRun->GetInputFile()->GetName(), fAccumulateEvent1, fAccumulateEvent2));
+    }
 }
 
 void ATMicromegas::ExecMouseClickEventOnPad(TVirtualPad *pad, double xOnClick, double yOnClick)
@@ -723,12 +734,44 @@ void ATMicromegas::ClickedCtrlEv1(double xOnClick, double yOnClick)
     auto currentEventID = fRun -> GetCurrentEventID();
     auto lastEventID = fRun -> GetNumEvents() - 1;
 
-    if (selectedBin==fBinCtrlFrst) { lk_info << "First event" << endl; fRun -> ExecuteFirstEvent(); }
-    if (selectedBin==fBinCtrlPr50) { lk_info << "Event +50"   << endl; fRun -> ExecuteEvent((currentEventID-50<0?0:currentEventID-50)); }
-    if (selectedBin==fBinCtrlPrev) { lk_info << "Prev. event" << endl; fRun -> ExecutePreviousEvent(); }
-    if (selectedBin==fBinCtrlNext) { lk_info << "Next event"  << endl; fRun -> ExecuteNextEvent(); }
-    if (selectedBin==fBinCtrlNe50) { lk_info << "Event -50"   << endl; fRun -> ExecuteEvent((currentEventID+50>lastEventID?lastEventID:currentEventID+50)); }
-    if (selectedBin==fBinCtrlLast) { lk_info << "Last event"  << endl; fRun -> ExecuteLastEvent(); }
+    if (fAccumulateEvents>0)
+    {
+        if (selectedBin==fBinCtrlFrst) { lk_info << "(First event) option is not available in acuumulate-event-mode" << endl; return; }
+        if (selectedBin==fBinCtrlPr50) { lk_info << "(Event -50)   option is not available in acuumulate-event-mode" << endl; return; }
+        if (selectedBin==fBinCtrlPrev) { lk_info << "(Prev. event  option is not available in acuumulate-event-mode" << endl; return; }
+        if (selectedBin==fBinCtrlCurr) { return; }
+        if (selectedBin==fBinCtrlNext) {
+            lk_info << "Next event"  << endl;
+            fRun -> ExecuteNextEvent();
+            fAccumulateEvent2 = fRun -> GetCurrentEventID();
+            ++fAccumulateEvents;
+        }
+        if (selectedBin==fBinCtrlNe50 || selectedBin==fBinCtrlLast)
+        {
+            Long64_t testEventTo = currentEventID + 50;
+            if ((selectedBin==fBinCtrlNe50 && (currentEventID+50>lastEventID)) || (selectedBin==fBinCtrlLast))
+                testEventTo = lastEventID;
+            lk_info << "Accumulating events: " << currentEventID+1 << " - " << testEventTo << " (" << testEventTo-currentEventID << ")" << endl;
+            for (Long64_t eventID=currentEventID+1; eventID<=testEventTo; ++eventID) {
+                fRun -> GetEvent(eventID);
+                SetDataFromBranch();
+                FillDataToHist();
+                fAccumulateEvent2 = fRun -> GetCurrentEventID();
+                ++fAccumulateEvents;
+            }
+            fHistCtrlEv2 -> SetBinContent(fBinCtrlAcmltEv, fAccumulateEvents);
+        }
+    }
+    else
+    {
+        if (selectedBin==fBinCtrlFrst) { lk_info << "First event" << endl; fRun -> ExecuteFirstEvent(); }
+        if (selectedBin==fBinCtrlPr50) { lk_info << "Event -50"   << endl; fRun -> ExecuteEvent((currentEventID-50<0?0:currentEventID-50)); }
+        if (selectedBin==fBinCtrlPrev) { lk_info << "Prev. event" << endl; fRun -> ExecutePreviousEvent(); }
+        if (selectedBin==fBinCtrlCurr) { return; }
+        if (selectedBin==fBinCtrlNext) { lk_info << "Next event"  << endl; fRun -> ExecuteNextEvent(); }
+        if (selectedBin==fBinCtrlNe50) { lk_info << "Event +50"   << endl; fRun -> ExecuteEvent((currentEventID+50>lastEventID?lastEventID:currentEventID+50)); }
+        if (selectedBin==fBinCtrlLast) { lk_info << "Last event"  << endl; fRun -> ExecuteLastEvent(); }
+    }
 
     Draw();
 }
@@ -743,12 +786,14 @@ void ATMicromegas::ClickedCtrlEv2(double xOnClick, double yOnClick)
     Long64_t currentEventID;
     Long64_t lastEventID;
 
+    if (selectedBin==fBinCtrlZZZZZZZ) { return; }
     if (selectedBin==fBinCtrlNEEL500 || selectedBin==fBinCtrlNEEL203)
     {
         if (fRun==nullptr)
             return;
-        auto currentEventID = fRun -> GetCurrentEventID();
-        auto lastEventID = fRun -> GetNumEvents() - 1;
+
+        currentEventID = fRun -> GetCurrentEventID();
+        lastEventID = fRun -> GetNumEvents() - 1;
 
         double energyCut = 500;
         if (selectedBin==fBinCtrlNEEL500) energyCut = 500;
@@ -779,7 +824,7 @@ void ATMicromegas::ClickedCtrlEv2(double xOnClick, double yOnClick)
             if (maxEnergy>energyCut)
                 break;
 
-            if (testEventID==lastEventID)
+            if (testEventID>=lastEventID)
                 break;
         }
         if (testEventID==lastEventID) {
@@ -808,7 +853,23 @@ void ATMicromegas::ClickedCtrlEv2(double xOnClick, double yOnClick)
             lk_info << "Set energy range to 4200" << endl;
         }
     }
-    if (selectedBin==fBinCtrl4200Max) { return; }
+    if (selectedBin==fBinCtrlAcmltEv)
+    {
+        if (fRun==nullptr)
+            return;
+        currentEventID = fRun -> GetCurrentEventID();
+        lastEventID = fRun -> GetNumEvents() - 1;
+
+        if (fAccumulateEvents>0)
+            fAccumulateEvents = 0;
+        else {
+            fAccumulateEvents = 1;
+            fAccumulateEvent1 = currentEventID;
+            fAccumulateEvent2 = currentEventID;
+        }
+        fHistCtrlEv2 -> SetBinContent(fBinCtrlAcmltEv, fAccumulateEvents);
+        return;
+    }
     if (selectedBin==fBinCtrlAcmltCh)
     {
         if (fAccumulateChannel) {
