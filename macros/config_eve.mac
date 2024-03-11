@@ -1,4 +1,9 @@
+<micoromegas_configs    config_atomx.mac
+
+*LKRun/Tag              eve
 LKEveTask/drawEve3D     true
 LKEveTask/drawPlane     true
-ATMicromegas/Mapping    {lilak_common}/atomx_micromegas_mapping_v3_chan.txt # cobo asad aget chan x y");
-ATMicromegas/fDefinePositionByPixelIndex    true
+
+Hit/markerStyle  20
+Hit/markerSize   1.1
+Hit/markerColor  kBlue

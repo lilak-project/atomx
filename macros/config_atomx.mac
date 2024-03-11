@@ -1,0 +1,3 @@
+atomx/Mapping    {lilak_common}/atomx_micromegas_mapping_v3_chan.txt # cobo asad aget chan x y
+atomx/DefinePositionByPixelIndex    true
+atomx/Threshold  300  # threshold for default peak finding method

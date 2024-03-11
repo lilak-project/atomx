@@ -1,0 +1,4 @@
+<micoromegas_configs    config_atomx.mac
+
+*LKRun/Tag          psa
+persistency/Hit     true

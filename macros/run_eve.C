@@ -12,10 +12,11 @@ void run_eve()
     run -> SetTag("eve");
     run -> AddPar("config_eve.mac");
     run -> AddInputFile("/home/ejungwoo/data/atomx/atomx_0058.D0.conv.root");
+    //run -> AddFriend("/home/ejungwoo/lilak/atomx/macros/data/atomx_0058.D0.psa.root");
     run -> AddDetector(new AToMX());
     //run -> Add(new LKGETChannelViewer);
+    run -> Add(new LKPulseShapeAnalysisTask);
     run -> Add(new LKEveTask);
     run -> Init();
-    //run -> Print();
     next(109);
 }
