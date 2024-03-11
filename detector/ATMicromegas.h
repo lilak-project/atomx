@@ -121,6 +121,8 @@ class ATMicromegas : public LKDetectorPlane, public LKPadInteractive
         bool fAccumulateChannel = false;
         TClonesArray *fChannelGraphArray = nullptr;
         int fCountChannelGraph = 0;
+
+        TString f2DEventDrawOption = "colz";
     /*
     protected:
         LKDetector *fDetector = nullptr;

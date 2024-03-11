@@ -61,8 +61,8 @@ bool ATMicromegas::Init()
 
     GetChannelAnalyzer();
 
-    gStyle -> SetPalette(kRainBow);
-    gStyle -> SetNumberContours(99);
+    //gStyle -> SetPalette(kRainBow);
+    //gStyle -> SetNumberContours(99);
 
     fMapCAACToPadID = new int***[fNumCobo];
     for(int i=0; i<fNumCobo; ++i) {
@@ -91,8 +91,16 @@ bool ATMicromegas::Init()
             LKPhysicalPad* pad = new LKPhysicalPad();
             pad -> SetPadID(padID);
             pad -> SetPlaneID(0);
+            pad -> SetSection(0);
             pad -> SetLayer(iz);
             pad -> SetRow(ix);
+            auto posz = (iz-fNZ/2+0.5)*fDZPad;
+            auto posx = (ix-fNX/2+0.5)*fDXPad;
+            if (fDefinePositionByPixelIndex) {
+                posz = iz;
+                posx = ix;
+            }
+            pad -> SetPosition(posz,posx);
             fChannelArray -> Add(pad);
         }
     }
@@ -108,14 +116,6 @@ bool ATMicromegas::Init()
         pad -> SetAsadID(asad);
         pad -> SetAgetID(aget);
         pad -> SetChannelID(chan);
-        auto posz = (iz1-fNZ/2-0.5)*fDZPad;
-        auto posx = (ix1-fNX/2-0.5)*fDXPad;
-        if (fDefinePositionByPixelIndex) {
-            posz = iz1-1;
-            posx = ix1-1;
-        }
-        pad -> SetPosition(posz,posx);
-        pad -> SetSection(0);
         ++countMap;
     }
 
@@ -136,10 +136,19 @@ int ATMicromegas::FindPadID(int cobo, int asad, int aget, int chan)
 
 void ATMicromegas::Draw(Option_t *option)
 {
+    TString fillOption;
+    TString optionString(option);
+    int ic = optionString.Index(":");
+    if (ic>=0) {
+        fillOption = optionString(0,ic);
+        f2DEventDrawOption = optionString(ic+1,optionString.Sizeof()-ic-2);
+    }
+
     GetCanvas();
     GetHist();
     SetDataFromBranch();
-    FillDataToHist(option);
+
+    FillDataToHist(fillOption);
     UpdateAll();
 }
 
@@ -157,10 +166,20 @@ void ATMicromegas::Update2DEvent()
         return;
     fPad2DEvent -> cd();
     fPad2DEvent -> SetGrid();
-    if      (fEnergyMaxMode==0) fHist2DEvent -> SetMaximum(-1111);
-    else if (fEnergyMaxMode==1) fHist2DEvent -> SetMaximum(2500);
-    else if (fEnergyMaxMode==2) fHist2DEvent -> SetMaximum(4200);
-    fHist2DEvent -> Draw("colz");
+    if      (fEnergyMaxMode==0) { fHist2DEvent -> SetMinimum(-1111); fHist2DEvent -> SetMaximum(-1111); }
+    else if (fEnergyMaxMode==1) { fHist2DEvent -> SetMinimum(0); fHist2DEvent -> SetMaximum(2500); }
+    else if (fEnergyMaxMode==2) { fHist2DEvent -> SetMinimum(0); fHist2DEvent -> SetMaximum(4200); }
+    else
+    {
+        fHist2DEvent -> SetMinimum(0);
+        fHist2DEvent -> SetMaximum(fEnergyMaxMode);
+        if (fEnergyMaxMode>100)
+            gStyle -> SetNumberContours(100);
+        else
+            gStyle -> SetNumberContours(fEnergyMaxMode);
+    }
+    fHist2DEvent -> Draw(f2DEventDrawOption);
+    f2DEventDrawOption = "colz";
 }
 
 void ATMicromegas::UpdateChannel()
@@ -187,6 +206,7 @@ void ATMicromegas::UpdateChannel()
         x2 = x0 + 1;
     }
 
+    fPad2DEvent -> cd();
     fGSel2DEvent -> Set(0);
     fGSel2DEvent -> SetPoint(0,z1,x1);
     fGSel2DEvent -> SetPoint(1,z1,x2);
@@ -194,6 +214,8 @@ void ATMicromegas::UpdateChannel()
     fGSel2DEvent -> SetPoint(3,z2,x1);
     fGSel2DEvent -> SetPoint(4,z1,x1);
     fGSel2DEvent -> SetLineColor(kGray+1);
+    fGSel2DEvent -> SetLineColor(kRed);
+    fGSel2DEvent -> Draw("samel");
 
     fSelRawDataIdx = pad -> GetDataIndex();
 
@@ -204,10 +226,6 @@ void ATMicromegas::UpdateChannel()
             fHistChannel -> Reset();
         else
             channel -> FillHist(fHistChannel);
-        fGSel2DEvent -> SetLineColor(kRed);
-
-        fPad2DEvent -> cd();
-        fGSel2DEvent -> Draw("samel");
 
         fPadChannel -> cd();
         if (fAccumulateChannel)
@@ -277,6 +295,10 @@ void ATMicromegas::UpdateChannel()
         }
         fFitChannel = false;
     }
+    else {
+        fPadChannel -> cd();
+        fHistChannel -> Draw();
+    }
 }
 
 void ATMicromegas::UpdateCtrlEv1()
@@ -285,13 +307,17 @@ void ATMicromegas::UpdateCtrlEv1()
         return;
     fPadCtrlEv1 -> cd();
     fPadCtrlEv1 -> SetGrid();
-    auto currentEventID = fRun -> GetCurrentEventID();
-    auto lastEventID = fRun -> GetNumEvents() - 1;
-    fHistCtrlEv1 -> SetBinContent(fBinCtrlPr50, (currentEventID-50<0?0:currentEventID-50));
-    fHistCtrlEv1 -> SetBinContent(fBinCtrlPrev, (currentEventID==0?0:currentEventID-1));
-    fHistCtrlEv1 -> SetBinContent(fBinCtrlNext, (currentEventID==lastEventID?lastEventID:currentEventID+1));
-    fHistCtrlEv1 -> SetBinContent(fBinCtrlNe50, (currentEventID+50>lastEventID?lastEventID:currentEventID+50));
-    fHistCtrlEv1 -> Draw("col text");
+    if (fRun!=nullptr) {
+        auto currentEventID = fRun -> GetCurrentEventID();
+        auto lastEventID = fRun -> GetNumEvents() - 1;
+        fHistCtrlEv1 -> SetBinContent(fBinCtrlPr50, (currentEventID-50<0?0:currentEventID-50));
+        fHistCtrlEv1 -> SetBinContent(fBinCtrlPrev, (currentEventID==0?0:currentEventID-1));
+        fHistCtrlEv1 -> SetBinContent(fBinCtrlNext, (currentEventID==lastEventID?lastEventID:currentEventID+1));
+        fHistCtrlEv1 -> SetBinContent(fBinCtrlNe50, (currentEventID+50>lastEventID?lastEventID:currentEventID+50));
+        fHistCtrlEv1 -> Draw("col text");
+    }
+    else
+        fHistCtrlEv1 -> Draw("text");
 }
 
 void ATMicromegas::UpdateCtrlEv2()
@@ -300,13 +326,10 @@ void ATMicromegas::UpdateCtrlEv2()
         return;
     fPadCtrlEv2 -> cd();
     fPadCtrlEv2 -> SetGrid();
-    auto currentEventID = fRun -> GetCurrentEventID();
-    auto lastEventID = fRun -> GetNumEvents() - 1;
-    //fHistCtrlEv2 -> SetBinContent(fBinCtrlPr50, (currentEventID-50<0?0:currentEventID-50));
-    //fHistCtrlEv2 -> SetBinContent(fBinCtrlPrev, (currentEventID==0?0:currentEventID-1));
-    //fHistCtrlEv2 -> SetBinContent(fBinCtrlNext, (currentEventID==lastEventID?lastEventID:currentEventID+1));
-    //fHistCtrlEv2 -> SetBinContent(fBinCtrlNe50, (currentEventID+50>lastEventID?lastEventID:currentEventID+50));
-    fHistCtrlEv2 -> Draw("col text");
+    if (fRun!=nullptr)
+        fHistCtrlEv2 -> Draw("col text");
+    else
+        fHistCtrlEv2 -> Draw("text");
 }
 
 TCanvas *ATMicromegas::GetCanvas(Option_t *option)
@@ -426,7 +449,11 @@ TH2* ATMicromegas::GetHist(Option_t *option)
         fHistCtrlEv1 -> GetXaxis() -> SetBinLabel(5,"+50");
         fHistCtrlEv1 -> GetXaxis() -> SetBinLabel(6,"Last");
         fHistCtrlEv1 -> SetBinContent(fBinCtrlFrst,0);
-        fHistCtrlEv1 -> SetBinContent(fBinCtrlLast,fRun->GetNumEvents()-1);
+        if (fRun!=nullptr)
+            fHistCtrlEv1 -> SetBinContent(fBinCtrlLast,fRun->GetNumEvents()-1);
+        else {
+            fHistCtrlEv1 -> SetBinContent(fBinCtrlLast,0);
+        }
         fHistCtrlEv1 -> SetMarkerSize(binTextSize);
         fHistCtrlEv1 -> SetMinimum(0);
 
@@ -547,7 +574,9 @@ void ATMicromegas::FillDataToHist(Option_t* option)
     GetHist();
     fHist2DEvent -> Reset();
 
-    TString optionString = TString(option);
+    TString optionString(option);
+    optionString.ToLower();
+
     TIter next(fChannelArray);
     LKPhysicalPad *pad = nullptr;
     TString title;
@@ -555,63 +584,80 @@ void ATMicromegas::FillDataToHist(Option_t* option)
     if (optionString.Index("caac")>=0) {
         lk_info << "Filling caac to plane" << endl;
         title = ("caac");
-        while ((pad = (LKPhysicalPad *) next()))
-            fHist2DEvent -> Fill(pad->GetI(),pad->GetJ(),pad->GetCAAC());
+        int maxCAAC = 0;
+        while ((pad = (LKPhysicalPad *) next())) {
+            auto caac = pad -> GetCAAC();
+            if (caac>maxCAAC) maxCAAC = caac;
+            fHist2DEvent -> Fill(pad->GetI(),pad->GetJ(),caac);
+        }
+        fEnergyMaxMode = maxCAAC;
     }
     else if (optionString.Index("cobo")>=0) {
+        fEnergyMaxMode = 4;
         lk_info << "Filling cobo to plane" << endl;
         title = ("cobo");
         while ((pad = (LKPhysicalPad *) next()))
             fHist2DEvent -> Fill(pad->GetI(),pad->GetJ(),pad->GetCoboID());
     }
     else if (optionString.Index("asad")>=0) {
+        fEnergyMaxMode = 4;
         lk_info << "Filling asad to plane" << endl;
         title = ("asad");
         while ((pad = (LKPhysicalPad *) next()))
             fHist2DEvent -> Fill(pad->GetI(),pad->GetJ(),pad->GetAsadID());
     }
     else if (optionString.Index("aget")>=0) {
+        fEnergyMaxMode = 4;
         lk_info << "Filling aget to plane" << endl;
         title = ("aget");
         while ((pad = (LKPhysicalPad *) next()))
             fHist2DEvent -> Fill(pad->GetI(),pad->GetJ(),pad->GetAgetID());
     }
     else if (optionString.Index("chan")>=0) {
+        fEnergyMaxMode = 70;
         lk_info << "Filling chan to plane" << endl;
         title = ("chan");
         while ((pad = (LKPhysicalPad *) next()))
             fHist2DEvent -> Fill(pad->GetI(),pad->GetJ(),pad->GetChannelID());
     }
+
     else if (optionString.Index("section")>=0) {
+        fEnergyMaxMode = 100;
         lk_info << "Filling section to plane" << endl;
         title = ("section");
         while ((pad = (LKPhysicalPad *) next()))
             fHist2DEvent -> Fill(pad->GetI(),pad->GetJ(),pad->GetSection());
     }
-    else if (optionString.Index("row")>=0) {
-        lk_info << "Filling row to plane" << endl;
-        title = ("raw");
-        while ((pad = (LKPhysicalPad *) next()))
-            fHist2DEvent -> Fill(pad->GetI(),pad->GetJ(),pad->GetRow());
-    }
     else if (optionString.Index("layer")>=0) {
+        fEnergyMaxMode = 100;
         lk_info << "Filling layer to plane" << endl;
         title = ("layer");
         while ((pad = (LKPhysicalPad *) next()))
             fHist2DEvent -> Fill(pad->GetI(),pad->GetJ(),pad->GetLayer());
     }
+    else if (optionString.Index("row")>=0) {
+        fEnergyMaxMode = 100;
+        lk_info << "Filling row to plane" << endl;
+        title = ("raw");
+        while ((pad = (LKPhysicalPad *) next()))
+            fHist2DEvent -> Fill(pad->GetI(),pad->GetJ(),pad->GetRow());
+    }
+
     else if (optionString.Index("padid")>=0) {
+        fEnergyMaxMode = 100;
         lk_info << "Filling pad id to plane" << endl;
         title = ("id");
         while ((pad = (LKPhysicalPad *) next()))
             fHist2DEvent -> Fill(pad->GetI(),pad->GetJ(),pad->GetPadID());
     }
     else if (optionString.Index("nhit")>=0) {
+        fEnergyMaxMode = 10;
         lk_info << "Filling number of hits to plane" << endl;
         title = ("nhit");
         while ((pad = (LKPhysicalPad *) next()))
             fHist2DEvent -> Fill(pad->GetI(),pad->GetJ(),pad->GetNumHits());
     }
+
     else if (fRawDataArray!=nullptr)
     {
         lk_info << "Filling raw data to plane" << endl;
@@ -669,6 +715,9 @@ void ATMicromegas::ClickedCtrlEv1(double xOnClick, double yOnClick)
     if (fHistCtrlEv1==nullptr)
         return;
 
+    if (fRun==nullptr)
+        return;
+
     int selectedBin = fHistCtrlEv1 -> FindBin(xOnClick, yOnClick);
 
     auto currentEventID = fRun -> GetCurrentEventID();
@@ -691,11 +740,16 @@ void ATMicromegas::ClickedCtrlEv2(double xOnClick, double yOnClick)
 
     int selectedBin = fHistCtrlEv2 -> FindBin(xOnClick, yOnClick);
 
-    auto currentEventID = fRun -> GetCurrentEventID();
-    auto lastEventID = fRun -> GetNumEvents() - 1;
+    Long64_t currentEventID;
+    Long64_t lastEventID;
 
     if (selectedBin==fBinCtrlNEEL500 || selectedBin==fBinCtrlNEEL203)
     {
+        if (fRun==nullptr)
+            return;
+        auto currentEventID = fRun -> GetCurrentEventID();
+        auto lastEventID = fRun -> GetNumEvents() - 1;
+
         double energyCut = 500;
         if (selectedBin==fBinCtrlNEEL500) energyCut = 500;
         else if (selectedBin==fBinCtrlNEEL203) energyCut = 2000;
@@ -747,7 +801,8 @@ void ATMicromegas::ClickedCtrlEv2(double xOnClick, double yOnClick)
             fHistCtrlEv2 -> SetBinContent(fBinCtrlEngyMax, 4200);
             lk_info << "Set energy range to 2500" << endl;
         }
-        else if (fEnergyMaxMode==2) {
+        else //if (fEnergyMaxMode==2)
+        {
             fEnergyMaxMode = 0;
             fHistCtrlEv2 -> SetBinContent(fBinCtrlEngyMax, 1);
             lk_info << "Set energy range to 4200" << endl;
