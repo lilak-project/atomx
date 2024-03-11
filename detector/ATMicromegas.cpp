@@ -11,6 +11,12 @@ ATMicromegas::ATMicromegas()
 : LKDetectorPlane("ATMicromegas","AToM-X Micromegas configuration")
 {
     fName = "AToMXPlane";
+
+    fAxis1 = LKVector3::kZ;
+    fAxis2 = LKVector3::kX;
+    fAxis3 = LKVector3::kY;
+    fAxisDrift = LKVector3::kY;
+    fChannelAnalyzer = nullptr;
 }
 
 LKChannelAnalyzer* ATMicromegas::GetChannelAnalyzer(int id)
@@ -19,6 +25,9 @@ LKChannelAnalyzer* ATMicromegas::GetChannelAnalyzer(int id)
     {
         fChannelAnalyzer = new LKChannelAnalyzer();
         //fChannelAnalyzer -> SetPulse(pulseFileName);
+        double threshold = 300;
+        fPar -> UpdatePar(threshold,"atomx/Threshold  300  # threshold for default peak finding method");
+        fChannelAnalyzer -> SetThreshold(threshold);
         fChannelAnalyzer -> Print();
     }
     return fChannelAnalyzer;
@@ -36,8 +45,21 @@ void ATMicromegas::Print(Option_t *option) const
 
 bool ATMicromegas::Init()
 {
-    fPar -> UpdatePar(fMappingFileName,"ATMicromegas/Mapping {lilak_common}/atomx_micromegas_mapping.txt # cobo asad aget chan x y");
-    fPar -> UpdatePar(fDefinePositionByPixelIndex,"ATMicromegas/fDefinePositionByPixelIndex false");
+    fPar -> UpdatePar(fMappingFileName,"atomx/Mapping {lilak_common}/atomx_micromegas_mapping.txt # cobo asad aget chan x y");
+    fPar -> UpdatePar(fDefinePositionByPixelIndex,"atomx/DefinePositionByPixelIndex false");
+
+    if (fDefinePositionByPixelIndex)
+    {
+        fPosition = 0;
+        fTbToLength = 1;
+    }
+    else {
+        fPosition = 0;
+        fTbToLength = 1;
+        fPar -> UpdatePar(fTbToLength,"ATMicromgegas/tb_to_length 1 # conversion from tb to length (length = tb * tb_to_length)");
+    }
+
+    GetChannelAnalyzer();
 
     gStyle -> SetPalette(kRainBow);
     gStyle -> SetNumberContours(99);
@@ -56,10 +78,6 @@ bool ATMicromegas::Init()
         }
     }
 
-    const int maxPads = fNZ*fNX;
-    fMapPadIDToPadIdx = new int[maxPads];
-    for (auto i=0; i<maxPads; ++i) fMapPadIDToPadIdx[i] = -1;
-
     ifstream fileCAACMap(fMappingFileName);
     if (!fileCAACMap.is_open()) {
         lk_error << "Cannot open " << fMappingFileName << endl;
@@ -67,14 +85,25 @@ bool ATMicromegas::Init()
     }
     lk_info << "mapping: " << fMappingFileName << endl;
 
+    for (auto ix=0; ix<fNX; ++ix) {
+        for (auto iz=0; iz<fNZ; ++iz) {
+            auto padID = iz + ix*fNZ;
+            LKPhysicalPad* pad = new LKPhysicalPad();
+            pad -> SetPadID(padID);
+            pad -> SetPlaneID(0);
+            pad -> SetLayer(iz);
+            pad -> SetRow(ix);
+            fChannelArray -> Add(pad);
+        }
+    }
+
+    int countMap = 0;
     int cobo, asad, aget, chan, iz1, ix1;
     while (fileCAACMap >> cobo >> asad >> aget >> chan >> iz1 >> ix1)
     {
         auto padID = (iz1-1) + (ix1-1)*fNZ;
         fMapCAACToPadID[cobo][asad][aget][chan] = padID;
-        LKPhysicalPad* pad = new LKPhysicalPad();
-        pad -> SetPadID(padID);
-        pad -> SetPlaneID(0);
+        auto pad = (LKPhysicalPad*) fChannelArray -> At(padID);
         pad -> SetCoboID(cobo);
         pad -> SetAsadID(asad);
         pad -> SetAgetID(aget);
@@ -87,29 +116,22 @@ bool ATMicromegas::Init()
         }
         pad -> SetPosition(posz,posx);
         pad -> SetSection(0);
-        pad -> SetLayer(iz1);
-        pad -> SetRow(ix1);
-        pad -> SetSortValue(10000-padID);
-        auto padIdx = fChannelArray -> GetEntries();
-        fMapPadIDToPadIdx[padID] = padIdx;
-        fChannelArray -> Add(pad);
+        ++countMap;
     }
 
-    //fChannelArray -> Sort();
-    auto numPads = fChannelArray -> GetEntries();
-    lk_info << numPads << " pads are mapped!" << endl;
-
-
-    if (numPads==fNZ*fNX)
-        fAllChannelsAreMapped = true;
-
-    GetCanvas();
-    GetHist();
+    lk_info << countMap << " pads are mapped!" << endl;
 
     if (fRun!=nullptr)
         fRawDataArray = fRun -> GetBranchA("RawData");
 
+    fChannelGraphArray = new TClonesArray("TGraph",20);
+
     return true;
+}
+
+int ATMicromegas::FindPadID(int cobo, int asad, int aget, int chan)
+{
+    return fMapCAACToPadID[cobo][asad][aget][chan];
 }
 
 void ATMicromegas::Draw(Option_t *option)
@@ -125,7 +147,8 @@ void ATMicromegas::UpdateAll()
 {
     Update2DEvent();
     UpdateChannel();
-    UpdateControl();
+    UpdateCtrlEv1();
+    UpdateCtrlEv2();
 }
 
 void ATMicromegas::Update2DEvent()
@@ -134,10 +157,9 @@ void ATMicromegas::Update2DEvent()
         return;
     fPad2DEvent -> cd();
     fPad2DEvent -> SetGrid();
-    if (fFixEnergyMax) 
-        fHist2DEvent -> SetMaximum(5000);
-    else
-        fHist2DEvent -> SetMaximum(-1111);
+    if      (fEnergyMaxMode==0) fHist2DEvent -> SetMaximum(-1111);
+    else if (fEnergyMaxMode==1) fHist2DEvent -> SetMaximum(2500);
+    else if (fEnergyMaxMode==2) fHist2DEvent -> SetMaximum(4200);
     fHist2DEvent -> Draw("colz");
 }
 
@@ -178,18 +200,60 @@ void ATMicromegas::UpdateChannel()
     if (fRawDataArray!=nullptr&&fSelRawDataIdx>=0)
     {
         auto channel = (GETChannel*) fRawDataArray -> At(fSelRawDataIdx);
-        channel -> FillHist(fHistChannel);
+        if (fAccumulateChannel)
+            fHistChannel -> Reset();
+        else
+            channel -> FillHist(fHistChannel);
         fGSel2DEvent -> SetLineColor(kRed);
 
         fPad2DEvent -> cd();
         fGSel2DEvent -> Draw("samel");
 
         fPadChannel -> cd();
-        if (fFixEnergyMax) 
-            fHistChannel -> SetMaximum(5000);
-        else
-            fHistChannel -> SetMaximum(-1111);
-        fHistChannel -> Draw("colz");
+        if (fAccumulateChannel)
+            fHistChannel -> SetMaximum(4200);
+        else {
+            if      (fEnergyMaxMode==0) fHistChannel -> SetMaximum(-1111);
+            else if (fEnergyMaxMode==1) fHistChannel -> SetMaximum(2500);
+            else if (fEnergyMaxMode==2) fHistChannel -> SetMaximum(4200);
+        }
+        auto cobo = channel -> GetCobo();
+        auto asad = channel -> GetAsad();
+        auto aget = channel -> GetAget();
+        auto chan = channel -> GetChan();
+        auto engy = channel -> GetEnergy();
+        auto time = channel -> GetTime();
+        auto pdst = channel -> GetPedestal();
+        TString title = Form("(CAAC) = (%d, %d, %d, %d)   |   (TEP)=(%.1f, %.1f, %.1f)", cobo, asad, aget, chan, time, engy, pdst);
+        fHistChannel -> SetTitle(title);
+        fHistChannel -> Draw();
+
+        if (fAccumulateChannel)
+        {
+            auto graph = (TGraph*) fChannelGraphArray -> ConstructedAt(fCountChannelGraph);
+            channel -> FillGraph(graph);
+            fCountChannelGraph++;
+            double yMin=DBL_MAX, yMax=-DBL_MAX;
+            for (auto iGraph=0; iGraph<fCountChannelGraph; ++iGraph)
+            {
+                auto graph = (TGraph*) fChannelGraphArray -> At(iGraph);
+                graph -> Draw("plc samel");
+                double x0, y0;
+                auto n = graph -> GetN();
+                for (auto i=0; i<n; ++i) {
+                    graph -> GetPoint(i,x0,y0);
+                    if (yMin>y0) yMin = y0;
+                    if (yMax<y0) yMax = y0;
+                }
+            }
+            double dy = 0.1*(yMax - yMin);
+            yMin = yMin - dy;
+            yMax = yMax + dy;
+            if (yMin<0) yMin = 0;
+            if (yMax>4200) yMax = 4200;
+            fHistChannel -> SetMinimum(yMin);
+            fHistChannel -> SetMaximum(yMax);
+        }
 
         if (fFitChannel)
         {
@@ -197,12 +261,14 @@ void ATMicromegas::UpdateChannel()
             auto numHits = fChannelAnalyzer -> GetNumHits();
             fPadChannel -> cd();
             auto graphPedestal = fChannelAnalyzer -> GetPedestalGraph();
+            graphPedestal -> SetLineColor(kOrange-3);
             graphPedestal -> Draw("samel");
             for (auto iHit=0; iHit<numHits; ++iHit)
             {
                 auto tbHit = fChannelAnalyzer -> GetTbHit(iHit);
                 auto amplitude = fChannelAnalyzer -> GetAmplitude(iHit);
                 auto pedestal = fChannelAnalyzer -> GetPedestal();
+                lk_info << iHit << ") (T,E,P) = (" << tbHit << ", " << amplitude << ", " << pedestal << ")" << endl;
                 auto graph = fChannelAnalyzer -> GetPulseGraph(tbHit,amplitude,pedestal);
                 graph -> SetLineColor(kBlue-4);
                 graph -> SetLineStyle(2);
@@ -213,20 +279,34 @@ void ATMicromegas::UpdateChannel()
     }
 }
 
-void ATMicromegas::UpdateControl()
+void ATMicromegas::UpdateCtrlEv1()
 {
-    if (fHistControl==nullptr) 
+    if (fHistCtrlEv1==nullptr)
         return;
-    fPadControl -> cd();
-    fPadControl -> SetGrid();
+    fPadCtrlEv1 -> cd();
+    fPadCtrlEv1 -> SetGrid();
     auto currentEventID = fRun -> GetCurrentEventID();
     auto lastEventID = fRun -> GetNumEvents() - 1;
-    fHistControl -> SetTitle(Form("%s (%lld)", fRun->GetInputFile()->GetName(), currentEventID));
-    fHistControl -> SetBinContent(fBinCtrlPr50, (currentEventID-50<0?0:currentEventID-50));
-    fHistControl -> SetBinContent(fBinCtrlPrev, (currentEventID==0?0:currentEventID-1));
-    fHistControl -> SetBinContent(fBinCtrlNext, (currentEventID==lastEventID?lastEventID:currentEventID+1));
-    fHistControl -> SetBinContent(fBinCtrlNe50, (currentEventID+50>lastEventID?lastEventID:currentEventID+50));
-    fHistControl -> Draw("col text");
+    fHistCtrlEv1 -> SetBinContent(fBinCtrlPr50, (currentEventID-50<0?0:currentEventID-50));
+    fHistCtrlEv1 -> SetBinContent(fBinCtrlPrev, (currentEventID==0?0:currentEventID-1));
+    fHistCtrlEv1 -> SetBinContent(fBinCtrlNext, (currentEventID==lastEventID?lastEventID:currentEventID+1));
+    fHistCtrlEv1 -> SetBinContent(fBinCtrlNe50, (currentEventID+50>lastEventID?lastEventID:currentEventID+50));
+    fHistCtrlEv1 -> Draw("col text");
+}
+
+void ATMicromegas::UpdateCtrlEv2()
+{
+    if (fHistCtrlEv2==nullptr)
+        return;
+    fPadCtrlEv2 -> cd();
+    fPadCtrlEv2 -> SetGrid();
+    auto currentEventID = fRun -> GetCurrentEventID();
+    auto lastEventID = fRun -> GetNumEvents() - 1;
+    //fHistCtrlEv2 -> SetBinContent(fBinCtrlPr50, (currentEventID-50<0?0:currentEventID-50));
+    //fHistCtrlEv2 -> SetBinContent(fBinCtrlPrev, (currentEventID==0?0:currentEventID-1));
+    //fHistCtrlEv2 -> SetBinContent(fBinCtrlNext, (currentEventID==lastEventID?lastEventID:currentEventID+1));
+    //fHistCtrlEv2 -> SetBinContent(fBinCtrlNe50, (currentEventID+50>lastEventID?lastEventID:currentEventID+50));
+    fHistCtrlEv2 -> Draw("col text");
 }
 
 TCanvas *ATMicromegas::GetCanvas(Option_t *option)
@@ -246,15 +326,31 @@ TCanvas *ATMicromegas::GetCanvas(Option_t *option)
         fPad3DEvent -> SetMargin(0.12,0.15,0.1,0.1);
         fPad3DEvent -> SetNumber(3);
         fPad3DEvent -> Draw();
-        fPadControl = new TPad("pad_control","",0.5,0,1,230./700);
-        fPadControl -> SetMargin(0.12,0.05,0.20,0.12);
-        fPadControl -> SetNumber(4);
-        fPadControl -> Draw();
+
+        double yCtrl1 = 0;
+        double yCtrl2 = 230./700;
+        double y1 = 0;
+        double y2 = y1 + 0.5*(yCtrl2-yCtrl1);
+        fPadCtrlEv1 = new TPad("pad_control","",0.5,y1,1,y2);
+        //fPadCtrlEv1 -> SetMargin(0.12,0.05,0.20,0.12);
+        fPadCtrlEv1 -> SetMargin(0.02,0.02,0.30,0.02);
+        fPadCtrlEv1 -> SetNumber(4);
+        fPadCtrlEv1 -> Draw();
+        y1 = y2;
+        y2 = y1 + 0.5*(yCtrl2-yCtrl1);
+        fPadCtrlEv2 = new TPad("pad_control","",0.5,y1,1,y2);
+        //fPadCtrlEv2 -> SetMargin(0.12,0.05,0.20,0.12);
+        fPadCtrlEv2 -> SetMargin(0.02,0.02,0.30,0.02);
+        fPadCtrlEv2 -> SetNumber(4);
+        fPadCtrlEv2 -> Draw();
+
         fCanvas -> Modified();
         fCanvas -> Update();
 
         AddInteractivePad(fPad2DEvent);
-        AddInteractivePad(fPadControl);
+        AddInteractivePad(fPadChannel);
+        AddInteractivePad(fPadCtrlEv1);
+        AddInteractivePad(fPadCtrlEv2);
     }
 
     return fCanvas;
@@ -272,6 +368,8 @@ TH2* ATMicromegas::GetHist(Option_t *option)
         fHist2DEvent -> GetYaxis() -> SetNdivisions(512);
         fHist2DEvent -> GetXaxis() -> SetNdivisions(512);
         fHist2DEvent -> SetStats(0);
+        fHist2DEvent -> GetXaxis() -> SetTickSize(0);
+        fHist2DEvent -> GetYaxis() -> SetTickSize(0);
         fGSel2DEvent = new TGraph();
         fGSel2DEvent -> SetLineColor(kRed);
 
@@ -288,58 +386,76 @@ TH2* ATMicromegas::GetHist(Option_t *option)
             for (auto ix=0; ix<fNX; ++ix) {
                 auto bing = fHist2DEvent -> GetBin(iz+1,ix+1);
                 auto padID = iz + ix*fNZ;
-                auto padIdx = fMapPadIDToPadIdx[padID];
                 fMapZXToBin[iz][ix] = bing;
-                if (padIdx>=0)
-                    fMapPadIdxToBin[padIdx] = bing;
+                fMapPadIdxToBin[padID] = bing;
                 if (bing>=0)
-                    fMapBinToPadIdx[bing] = padIdx;
+                    fMapBinToPadIdx[bing] = padID;
             }
         }
 
         fHistChannel = new TH1D("ATMicromegas_Channel",";tb;y",512,0,512);
         fHistChannel -> SetStats(0);
         fHistChannel -> SetLineColor(kBlack);
+        fHistChannel -> GetXaxis() -> SetTitleSize(0.06);
+        fHistChannel -> GetYaxis() -> SetTitleSize(0.06);
+        fHistChannel -> GetYaxis() -> SetTitleOffset(1.0);
+        fHistChannel -> GetXaxis() -> SetLabelSize(0.06);
+        fHistChannel -> GetYaxis() -> SetLabelSize(0.06);
 
         gStyle -> SetHistMinimumZero(); // this will draw text even when content is 0
-        fHistControl = new TH2D("ATMicromegas_Control","",6,0,6,2,0,2);
-        fHistControl -> SetStats(0);
-        fBinCtrlFrst = fHistControl -> GetBin(1,1);
-        fBinCtrlPr50 = fHistControl -> GetBin(2,1);
-        fBinCtrlPrev = fHistControl -> GetBin(3,1);
-        fBinCtrlNext = fHistControl -> GetBin(4,1);
-        fBinCtrlNe50 = fHistControl -> GetBin(5,1);
-        fBinCtrlLast = fHistControl -> GetBin(6,1);
-        fBinCtrlNextE300 = fHistControl -> GetBin(4,2);
-        fBinCtrlNextE500 = fHistControl -> GetBin(5,2);
-        fBinCtrlNextE1000= fHistControl -> GetBin(6,2);
-        fBinCtrlAutoMax = fHistControl -> GetBin(1,2);
-        fBinCtrl5000Max = fHistControl -> GetBin(2,2);
-        fBinCtrlFitChannel = fHistControl -> GetBin(3,2);
-        fHistControl -> GetYaxis() -> SetTickSize(0);
-        fHistControl -> GetYaxis() -> SetBinLabel(1,"");
-        fHistControl -> GetYaxis() -> SetLabelSize(0.08);
-        fHistControl -> GetXaxis() -> SetTickSize(0);
-        fHistControl -> GetXaxis() -> SetBinLabel(1,"First");
-        fHistControl -> GetXaxis() -> SetBinLabel(2,"-50");
-        fHistControl -> GetXaxis() -> SetBinLabel(3,"Prev.");
-        fHistControl -> GetXaxis() -> SetBinLabel(4,"Next");
-        fHistControl -> GetXaxis() -> SetBinLabel(5,"+50");
-        fHistControl -> GetXaxis() -> SetBinLabel(6,"Last");
-        fHistControl -> GetXaxis() -> SetLabelSize(0.08);
-        fHistControl -> SetBinContent(fBinCtrlFrst,0);
-        //fHistControl -> SetBinContent(2,2);
-        //fHistControl -> SetBinContent(3,3);
-        fHistControl -> SetBinContent(fBinCtrlLast,fRun->GetNumEvents()-1);
-        fHistControl -> SetBinContent(fBinCtrlAutoMax,   1);
-        fHistControl -> SetBinContent(fBinCtrl5000Max,   5000);
-        fHistControl -> SetBinContent(fBinCtrlFitChannel,999);
-        fHistControl -> SetBinContent(fBinCtrlNextE300,  300);
-        fHistControl -> SetBinContent(fBinCtrlNextE500,  500);
-        fHistControl -> SetBinContent(fBinCtrlNextE1000, 1000);
-        fHistControl -> SetMarkerSize(2.0);
-        //fHistControl -> SetMaximum(4);
-        fHistControl -> SetMinimum(0);
+
+        double binTextSize = 6.0;
+        double ctrlLabelSize = 0.20;
+
+        fHistCtrlEv1 = new TH2D("ATMicromegas_CtrlEv1","",6,0,6,1,0,1);
+        fHistCtrlEv1 -> SetStats(0);
+        fBinCtrlFrst = fHistCtrlEv1 -> GetBin(1,1);
+        fBinCtrlPr50 = fHistCtrlEv1 -> GetBin(2,1);
+        fBinCtrlPrev = fHistCtrlEv1 -> GetBin(3,1);
+        fBinCtrlNext = fHistCtrlEv1 -> GetBin(4,1);
+        fBinCtrlNe50 = fHistCtrlEv1 -> GetBin(5,1);
+        fBinCtrlLast = fHistCtrlEv1 -> GetBin(6,1);
+        fHistCtrlEv1 -> GetXaxis() -> SetTickSize(0);
+        fHistCtrlEv1 -> GetYaxis() -> SetTickSize(0);
+        fHistCtrlEv1 -> GetYaxis() -> SetBinLabel(1,"");
+        fHistCtrlEv1 -> GetXaxis() -> SetLabelSize(ctrlLabelSize);
+        fHistCtrlEv1 -> GetXaxis() -> SetBinLabel(1,"First");
+        fHistCtrlEv1 -> GetXaxis() -> SetBinLabel(2,"-50");
+        fHistCtrlEv1 -> GetXaxis() -> SetBinLabel(3,"Prev.");
+        fHistCtrlEv1 -> GetXaxis() -> SetBinLabel(4,"Next");
+        fHistCtrlEv1 -> GetXaxis() -> SetBinLabel(5,"+50");
+        fHistCtrlEv1 -> GetXaxis() -> SetBinLabel(6,"Last");
+        fHistCtrlEv1 -> SetBinContent(fBinCtrlFrst,0);
+        fHistCtrlEv1 -> SetBinContent(fBinCtrlLast,fRun->GetNumEvents()-1);
+        fHistCtrlEv1 -> SetMarkerSize(binTextSize);
+        fHistCtrlEv1 -> SetMinimum(0);
+
+        fHistCtrlEv2 = new TH2D("ATMicromegas_CtrlEv2","",6,0,6,1,0,1);
+        fHistCtrlEv2 -> SetStats(0);
+        fBinCtrlEngyMax = fHistCtrlEv2 -> GetBin(1,1);
+        fBinCtrl4200Max = fHistCtrlEv2 -> GetBin(2,1);
+        fBinCtrlAcmltCh = fHistCtrlEv2 -> GetBin(3,1);
+        fBinCtrlFitChan = fHistCtrlEv2 -> GetBin(4,1);
+        fBinCtrlNEEL500 = fHistCtrlEv2 -> GetBin(5,1);
+        fBinCtrlNEEL203 = fHistCtrlEv2 -> GetBin(6,1);
+        fHistCtrlEv2 -> GetXaxis() -> SetTickSize(0);
+        fHistCtrlEv2 -> GetYaxis() -> SetTickSize(0);
+        fHistCtrlEv2 -> GetYaxis() -> SetBinLabel(1,"");
+        fHistCtrlEv2 -> GetXaxis() -> SetLabelSize(ctrlLabelSize);
+        fHistCtrlEv2 -> GetXaxis() -> SetBinLabel(1,"E(3)");  // fBinCtrlEngyMax
+        //fHistCtrlEv2 -> GetXaxis() -> SetBinLabel(2,"E2=4096");  // fBinCtrl4200Max
+        fHistCtrlEv2 -> GetXaxis() -> SetBinLabel(3,"Acc Ch.");  // fBinCtrlAcmltCh
+        fHistCtrlEv2 -> GetXaxis() -> SetBinLabel(4,"Fit Ch.");  // fBinCtrlFitChan
+        fHistCtrlEv2 -> GetXaxis() -> SetBinLabel(5,"@E>=500");  // fBinCtrlNEEL500
+        fHistCtrlEv2 -> GetXaxis() -> SetBinLabel(6,"@E>=2000"); // fBinCtrlNEEL203
+        fHistCtrlEv2 -> SetBinContent(fBinCtrlEngyMax, 1);
+        //fHistCtrlEv2 -> SetBinContent(fBinCtrl4200Max, 4096);
+        fHistCtrlEv2 -> SetBinContent(fBinCtrlAcmltCh, 0);
+        fHistCtrlEv2 -> SetBinContent(fBinCtrlFitChan, 1);
+        fHistCtrlEv2 -> SetBinContent(fBinCtrlNEEL500, 500);
+        fHistCtrlEv2 -> SetBinContent(fBinCtrlNEEL203, 2000);
+        fHistCtrlEv2 -> SetMarkerSize(binTextSize);
+        fHistCtrlEv2 -> SetMinimum(0);
     }
     return (TH2*) fHist2DEvent;
 }
@@ -382,7 +498,8 @@ bool ATMicromegas::SetDataFromBranch()
         auto pad = FindPad(cobo,asad,aget,chan);
         if (pad==nullptr)
         {
-            lk_error << "Pad doesn't exist! CAAC= " << cobo << " " << asad << " " << aget << " " << chan << endl;
+            if (chan!=11&&chan!=22&&chan!=45&&chan!=56)
+                lk_error << "Pad doesn't exist! CAAC= " << cobo << " " << asad << " " << aget << " " << chan << endl;
             continue;
         }
         pad -> SetTime(channel->GetTime());
@@ -392,8 +509,7 @@ bool ATMicromegas::SetDataFromBranch()
 
         if (channel->GetEnergy()>selEnergy) {
             auto padID = fMapCAACToPadID[cobo][asad][aget][chan];
-            auto padIdx = fMapPadIDToPadIdx[padID];
-            fSelPadIdx = padIdx;
+            fSelPadIdx = padID;
             fSelRawDataIdx = iRawData;
             selEnergy = channel->GetEnergy();
         }
@@ -405,29 +521,31 @@ LKPhysicalPad* ATMicromegas::FindPad(int cobo, int asad, int aget, int chan)
 {
     LKPhysicalPad *pad = nullptr;
     auto padID = fMapCAACToPadID[cobo][asad][aget][chan];
-    if (fAllChannelsAreMapped) {
+    if (padID>=0) {
         pad = (LKPhysicalPad*) fChannelArray -> At(padID);
         return pad;
     }
-    auto padIdx = fMapPadIDToPadIdx[padID];
-    if (padIdx>=0) {
-        pad = (LKPhysicalPad*) fChannelArray -> At(padIdx);
-        return pad;
-    }
-    /*
-    TIter next(fChannelArray);
-    while (pad = (LKPhysicalPad*) next()) {
-        if (pad->GetPadID()==padID)
-            return pad;
-    }
-    */
     return (LKPhysicalPad*) nullptr;
+}
+
+void ATMicromegas::DriftElectronBack(int padID, double tb, TVector3 &posReco, double &driftLength)
+{
+    auto pad = (LKPhysicalPad*) fChannelArray -> At(padID);
+    LKVector3 pos(fAxis3);
+    pos.SetI(pad->GetI());
+    pos.SetJ(pad->GetJ());
+    if (fAxis3!=fAxisDrift)
+        pos.SetK(fTbToLength*tb+fPosition);
+    else
+        pos.SetK((-fTbToLength)*tb+fPosition);
+    posReco = pos.GetXYZ();
+    driftLength = fTbToLength*tb;
 }
 
 void ATMicromegas::FillDataToHist(Option_t* option)
 {
-    auto hist = GetHist();
-    hist -> Reset();
+    GetHist();
+    fHist2DEvent -> Reset();
 
     TString optionString = TString(option);
     TIter next(fChannelArray);
@@ -507,19 +625,19 @@ void ATMicromegas::FillDataToHist(Option_t* option)
             auto i = pad -> GetI();
             auto j = pad -> GetJ();
             auto energy = channel -> GetEnergy();
-            hist -> Fill(i,j,energy);
+            fHist2DEvent -> Fill(i,j,energy);
         }
     }
 
     if (fRun!=nullptr)
-        title = Form("Event %lld (%s)", fRun->GetCurrentEventID(), title.Data());
-    hist -> SetTitle(title);
+        fHist2DEvent -> SetTitle(Form("%s (event %lld)", fRun->GetInputFile()->GetName(), fRun->GetCurrentEventID()));
 }
 
 void ATMicromegas::ExecMouseClickEventOnPad(TVirtualPad *pad, double xOnClick, double yOnClick)
 {
     if (pad==fPad2DEvent) Clicked2DEvent(xOnClick, yOnClick);
-    if (pad==fPadControl) ClickedControl(xOnClick, yOnClick);
+    if (pad==fPadCtrlEv1) ClickedCtrlEv1(xOnClick, yOnClick);
+    if (pad==fPadCtrlEv2) ClickedCtrlEv2(xOnClick, yOnClick);
 }
 void ATMicromegas::Clicked2DEvent(double xOnClick, double yOnClick)
 {
@@ -546,63 +664,117 @@ void ATMicromegas::Clicked2DEvent(double xOnClick, double yOnClick)
     UpdateChannel();
 }
 
-void ATMicromegas::ClickedControl(double xOnClick, double yOnClick)
+void ATMicromegas::ClickedCtrlEv1(double xOnClick, double yOnClick)
 {
-    if (fHistControl==nullptr)
+    if (fHistCtrlEv1==nullptr)
         return;
 
-    int selectedBin = fHistControl -> FindBin(xOnClick, yOnClick);
+    int selectedBin = fHistCtrlEv1 -> FindBin(xOnClick, yOnClick);
 
     auto currentEventID = fRun -> GetCurrentEventID();
     auto lastEventID = fRun -> GetNumEvents() - 1;
+
     if (selectedBin==fBinCtrlFrst) { lk_info << "First event" << endl; fRun -> ExecuteFirstEvent(); }
     if (selectedBin==fBinCtrlPr50) { lk_info << "Event +50"   << endl; fRun -> ExecuteEvent((currentEventID-50<0?0:currentEventID-50)); }
     if (selectedBin==fBinCtrlPrev) { lk_info << "Prev. event" << endl; fRun -> ExecutePreviousEvent(); }
     if (selectedBin==fBinCtrlNext) { lk_info << "Next event"  << endl; fRun -> ExecuteNextEvent(); }
     if (selectedBin==fBinCtrlNe50) { lk_info << "Event -50"   << endl; fRun -> ExecuteEvent((currentEventID+50>lastEventID?lastEventID:currentEventID+50)); }
     if (selectedBin==fBinCtrlLast) { lk_info << "Last event"  << endl; fRun -> ExecuteLastEvent(); }
-    if (selectedBin==fBinCtrlNextE300 || selectedBin==fBinCtrlNextE500 || selectedBin==fBinCtrlNextE1000)
+
+    Draw();
+}
+
+void ATMicromegas::ClickedCtrlEv2(double xOnClick, double yOnClick)
+{
+    if (fHistCtrlEv2==nullptr)
+        return;
+
+    int selectedBin = fHistCtrlEv2 -> FindBin(xOnClick, yOnClick);
+
+    auto currentEventID = fRun -> GetCurrentEventID();
+    auto lastEventID = fRun -> GetNumEvents() - 1;
+
+    if (selectedBin==fBinCtrlNEEL500 || selectedBin==fBinCtrlNEEL203)
     {
-        double energyCut = 300;
-        if      (selectedBin==fBinCtrlNextE300)  energyCut = 300;
-        else if (selectedBin==fBinCtrlNextE500)  energyCut = 500;
-        else if (selectedBin==fBinCtrlNextE1000) energyCut = 1000;
-        if (fRawDataArray!=nullptr)
+        double energyCut = 500;
+        if (selectedBin==fBinCtrlNEEL500) energyCut = 500;
+        else if (selectedBin==fBinCtrlNEEL203) energyCut = 2000;
+
+        if (fRawDataArray==nullptr)
+            return;
+
+        auto testEventID = currentEventID;
+        while (currentEventID<=lastEventID+1)
         {
-            while (currentEventID<=lastEventID+1)
+            testEventID++;
+            lk_info << "Testing " << testEventID << endl;
+
+            //fRun -> ExecuteNextEvent();
+            fRun -> GetEvent(testEventID);
+
+            double maxEnergy = 0;
+            auto numChannels = fRawDataArray -> GetEntries();
+            for (auto iRawData=0; iRawData<numChannels; ++iRawData)
             {
-                fRun -> ExecuteNextEvent();
-                currentEventID = fRun -> GetCurrentEventID();
-
-                double maxEnergy = 0;
-                auto numChannels = fRawDataArray -> GetEntries();
-                for (auto iRawData=0; iRawData<numChannels; ++iRawData)
-                {
-                    auto channel = (GETChannel*) fRawDataArray -> At(iRawData);
-                    if (channel->GetEnergy()>maxEnergy) {
-                        maxEnergy = channel->GetEnergy();
-                        break;
-                    }
+                auto channel = (GETChannel*) fRawDataArray -> At(iRawData);
+                if (channel->GetEnergy()>maxEnergy) {
+                    maxEnergy = channel->GetEnergy();
+                    break;
                 }
-                if (maxEnergy>energyCut)
-                    break;
-
-                if (currentEventID==lastEventID+1)
-                    break;
             }
+            if (maxEnergy>energyCut)
+                break;
+
+            if (testEventID==lastEventID)
+                break;
         }
-        if (currentEventID==lastEventID) {
+        if (testEventID==lastEventID) {
             lk_error << "No event with energy " << energyCut << endl;
             return;
         }
+
+        fRun -> ExecuteEvent(testEventID);
         lk_info << "Event with energy " << energyCut << " : " << currentEventID << endl;
     }
-    if (selectedBin==fBinCtrlAutoMax) { fFixEnergyMax = false; lk_info << "Fix energy maximum to 5000" << endl; }
-    if (selectedBin==fBinCtrl5000Max) { fFixEnergyMax = true;  lk_info << "Use anto energy maximum" << endl; }
-    if (selectedBin==fBinCtrlFitChannel)
+    if (selectedBin==fBinCtrlEngyMax) {
+        if (fEnergyMaxMode==0) {
+            fEnergyMaxMode = 1;
+            fHistCtrlEv2 -> SetBinContent(fBinCtrlEngyMax, 2500);
+            lk_info << "Set energy range automatic" << endl;
+        }
+        else if (fEnergyMaxMode==1) {
+            fEnergyMaxMode = 2;
+            fHistCtrlEv2 -> SetBinContent(fBinCtrlEngyMax, 4200);
+            lk_info << "Set energy range to 2500" << endl;
+        }
+        else if (fEnergyMaxMode==2) {
+            fEnergyMaxMode = 0;
+            fHistCtrlEv2 -> SetBinContent(fBinCtrlEngyMax, 1);
+            lk_info << "Set energy range to 4200" << endl;
+        }
+    }
+    if (selectedBin==fBinCtrl4200Max) { return; }
+    if (selectedBin==fBinCtrlAcmltCh)
+    {
+        if (fAccumulateChannel) {
+            fCountChannelGraph = 0;
+            fAccumulateChannel = false;
+            fHistCtrlEv2 -> SetBinContent(fBinCtrlAcmltCh, 0);
+        }
+        else {
+            fCountChannelGraph = 0;
+            fAccumulateChannel = true;
+            fHistCtrlEv2 -> SetBinContent(fBinCtrlAcmltCh, 1);
+        }
+        UpdateChannel();
+        return;
+    }
+    if (selectedBin==fBinCtrlFitChan)
     {
         lk_info << "Fit channel" << endl;
         fFitChannel = true;
+        UpdateChannel();
+        return;
     }
 
     Draw();

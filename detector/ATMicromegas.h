@@ -29,15 +29,16 @@ class ATMicromegas : public LKDetectorPlane, public LKPadInteractive
         virtual TVector3 GlobalToLocalAxis(TVector3 posGlobal) { return TVector3(); } ///< Implementation recommanded. Convert global position to local detector plane position TODO
         virtual TVector3 LocalToGlobalAxis(TVector3 posLocal) { return TVector3(); } ///< Implementation recommanded. Convert local position to global detector plane position TODO
 
-        virtual int FindChannelID(double i, double j) { return -1; } ///< Implementation recommanded. Find channel using position. TODO
-        virtual int FindChannelID(int section, int layer, int row) { return -1; } ///< Implementation recommanded. Find channel using section, layer, row info. TODO
-        virtual int FindPadID(int cobo, int asad, int aget, int chan) { return -1; } // TODO
+        virtual int FindChannelID(double i, double j) { return -1; }
+        virtual int FindChannelID(int section, int layer, int row) { return -1; }
+        virtual int FindPadID(int cobo, int asad, int aget, int chan);
         //virtual int FindPadID(double i, double j) { return FindChannelID(i,j); }
         //virtual int FindPadID(int section, int layer, int row) { return FindChannelID(section,layer,row); }
 
         virtual LKChannelAnalyzer* GetChannelAnalyzer(int id=0);
 
         LKPhysicalPad* FindPad(int cobo, int asad, int aget, int chan);
+        virtual void DriftElectronBack(int padID, double tb, TVector3 &posReco, double &driftLength);
 
         virtual bool SetDataFromBranch(); ///< Implementation recommanded. Set waveform and hit data from input tree branches to pads
         virtual void FillDataToHist(Option_t *option = ""); ///< Implementation recommanded. Fill data to histograms.
@@ -45,17 +46,20 @@ class ATMicromegas : public LKDetectorPlane, public LKPadInteractive
         virtual TPad* Get3DEventPad() { return GetPad3DEvent(); }
 
         virtual void ExecMouseClickEventOnPad(TVirtualPad *pad, double xOnClick, double yOnClick);
-        void ClickedControl(double xOnClick, double yOnClick);
+        void ClickedCtrlEv1(double xOnClick, double yOnClick);
+        void ClickedCtrlEv2(double xOnClick, double yOnClick);
         void Clicked2DEvent(double xOnClick, double yOnClick);
         TPad *GetPad2DEvent() { return fPad2DEvent; }
         TPad *GetPad3DEvent() { return fPad3DEvent; }
         TPad *GetPadChannel() { return fPadChannel; }
-        TPad *GetPadControl() { return fPadControl; }
+        TPad *GetPadCtrlEv1() { return fPadCtrlEv1; }
+        TPad *GetPadCtrlEv2() { return fPadCtrlEv2; }
 
         void UpdateAll();
         void Update2DEvent();
         void UpdateChannel();
-        void UpdateControl();
+        void UpdateCtrlEv1();
+        void UpdateCtrlEv2();
 
     private:
         const int fNZ = 72;
@@ -67,8 +71,6 @@ class ATMicromegas : public LKDetectorPlane, public LKPadInteractive
         const double fDZBoard = 388;
         const double fDXBoard = 356;
 
-        bool fAllChannelsAreMapped = false;
-
         TString fMappingFileName;
         int fNumCobo = 6;
         int fNumAsad = 4;
@@ -78,7 +80,6 @@ class ATMicromegas : public LKDetectorPlane, public LKPadInteractive
         int ****fMapCAACToPadID; ///< [cobo][asad][aget][chan] to pad-id mapping
         int *fMapPadIdxToBin; ///< pad-id to histogram bin mapping
         int *fMapBinToPadIdx; ///< histogram bin to pad-id mapping
-        int *fMapPadIDToPadIdx; ///< padID to pad-index (in fChannelArray) mapping
         int **fMapZXToBin; ///< pixel(Z,X) to histogram bin mapping
 
         TClonesArray *fRawDataArray = nullptr;
@@ -88,20 +89,22 @@ class ATMicromegas : public LKDetectorPlane, public LKPadInteractive
         TPad* fPad2DEvent = nullptr;
         TPad* fPad3DEvent = nullptr;
         TPad* fPadChannel = nullptr;
-        TPad* fPadControl = nullptr;
+        TPad* fPadCtrlEv1 = nullptr;
+        TPad* fPadCtrlEv2 = nullptr;
 
         TH2D* fHist2DEvent = nullptr;
         TH1D* fHistChannel = nullptr;
-        TH2D* fHistControl = nullptr;
+        TH2D* fHistCtrlEv1 = nullptr;
+        TH2D* fHistCtrlEv2 = nullptr;
 
         TGraph* fGSel2DEvent = nullptr;
 
-        int fBinCtrlAutoMax;
-        int fBinCtrl5000Max;
-        int fBinCtrlFitChannel;
-        int fBinCtrlNextE300;
-        int fBinCtrlNextE500;
-        int fBinCtrlNextE1000;
+        int fBinCtrlEngyMax;
+        int fBinCtrl4200Max;
+        int fBinCtrlFitChan;
+        int fBinCtrlAcmltCh;
+        int fBinCtrlNEEL500; ///< Next Event with Energy Larger than > 500
+        int fBinCtrlNEEL203; ///< Next Event with Energy Larger than > 2000
 
         int fBinCtrlFrst;
         int fBinCtrlPr50;
@@ -113,8 +116,11 @@ class ATMicromegas : public LKDetectorPlane, public LKPadInteractive
         int fSelPadIdx = 0;
         int fSelRawDataIdx = 0;
 
-        bool fFixEnergyMax = true;
+        int fEnergyMaxMode = 0;
         bool fFitChannel = false;
+        bool fAccumulateChannel = false;
+        TClonesArray *fChannelGraphArray = nullptr;
+        int fCountChannelGraph = 0;
     /*
     protected:
         LKDetector *fDetector = nullptr;

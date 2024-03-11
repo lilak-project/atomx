@@ -5,7 +5,7 @@ ClassImp(AToMX);
 
 AToMX::AToMX()
 {
-    fName = "AToMX";
+    fName = "AToM-X";
     if (fDetectorPlaneArray==nullptr)
         fDetectorPlaneArray = new TObjArray();
 }
@@ -16,6 +16,8 @@ bool AToMX::Init()
 
     // Put intialization todos here which are not iterative job though event
     lk_info << "Initializing AToMX" << std::endl;
+
+    fPar -> UpdatePar(fDefinePositionByPixelIndex,"atomx/DefinePositionByPixelIndex false");
 
     return true;
 }
@@ -49,12 +51,23 @@ bool AToMX::IsInBoundary(Double_t x, Double_t y, Double_t z)
 
 bool AToMX::GetEffectiveDimension(Double_t &x1, Double_t &y1, Double_t &z1, Double_t &x2, Double_t &y2, Double_t &z2)
 {
-    x1 = -80*4;
-    x2 = +80*4;
-    y1 = -200;
-    y2 = +200;
-    z1 = -80*4;
-    z2 = +80*4;
+    if (fDefinePositionByPixelIndex)
+    {
+        x1 = 0;
+        x2 = +80;
+        y1 = -512;
+        y2 = 0;
+        z1 = 0;
+        z2 = +80;
+    }
+    else {
+        x1 = -80*4;
+        x2 = +80*4;
+        y1 = -200;
+        y2 = +200;
+        z1 = -80*4;
+        z2 = +80*4;
+    }
     return true;
 }
 
