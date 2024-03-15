@@ -106,17 +106,28 @@ bool ATMicromegas::Init()
     }
 
     int countMap = 0;
-    int cobo, asad, aget, chan, iz1, ix1;
-    while (fileCAACMap >> cobo >> asad >> aget >> chan >> iz1 >> ix1)
+    int coboIn, asadIn, aget, chan, iz1, ix1;
+    while (fileCAACMap >> coboIn >> asadIn >> aget >> chan >> iz1 >> ix1)
     {
-        auto padID = (iz1-1) + (ix1-1)*fNZ;
-        fMapCAACToPadID[cobo][asad][aget][chan] = padID;
-        auto pad = (LKPhysicalPad*) fChannelArray -> At(padID);
-        pad -> SetCoboID(cobo);
-        pad -> SetAsadID(asad);
-        pad -> SetAgetID(aget);
-        pad -> SetChannelID(chan);
-        ++countMap;
+        for (auto addAsad=0; addAsad<4; ++addAsad)
+        {
+            int iz = iz1 - 1;
+            int ix = ix1 - 1;
+            int cobo = coboIn;
+            int asad = asadIn;
+            if (addAsad>0) {
+                asad = asadIn + addAsad;
+                iz = iz + 4*addAsad;
+            }
+            auto padID = iz + ix*fNZ;
+            fMapCAACToPadID[cobo][asad][aget][chan] = padID;
+            auto pad = (LKPhysicalPad*) fChannelArray -> At(padID);
+            pad -> SetCoboID(cobo);
+            pad -> SetAsadID(asad);
+            pad -> SetAgetID(aget);
+            pad -> SetChannelID(chan);
+            ++countMap;
+        }
     }
 
     lk_info << countMap << " pads are mapped!" << endl;
@@ -192,6 +203,8 @@ void ATMicromegas::UpdateChannel()
         lk_error << "pad at " << fSelPadIdx << " is nullptr" << endl;
         return;
     }
+
+    fHistCtrlEv2 -> SetBinContent(fBinCtrlFitChan, 0);
 
     double z0 = pad -> GetI();
     double x0 = pad -> GetJ();
@@ -292,6 +305,7 @@ void ATMicromegas::UpdateChannel()
                 graph -> SetLineStyle(2);
                 graph -> Draw("samel");
             }
+            fHistCtrlEv2 -> SetBinContent(fBinCtrlFitChan, 1);
         }
         fFitChannel = false;
     }
@@ -481,14 +495,15 @@ TH2* ATMicromegas::GetHist(Option_t *option)
         fHistCtrlEv2 -> GetXaxis() -> SetBinLabel(6,"@E>=500");  // fBinCtrlNEEL500
         fHistCtrlEv2 -> GetXaxis() -> SetBinLabel(7,"@E>=2000"); // fBinCtrlNEEL203
         fHistCtrlEv2 -> SetBinContent(fBinCtrlZZZZZZZ, 0);
-        fHistCtrlEv2 -> SetBinContent(fBinCtrlEngyMax, 1);
+        fHistCtrlEv2 -> SetBinContent(fBinCtrlEngyMax, 0);
         fHistCtrlEv2 -> SetBinContent(fBinCtrlAcmltEv, 0);
         fHistCtrlEv2 -> SetBinContent(fBinCtrlAcmltCh, 0);
-        fHistCtrlEv2 -> SetBinContent(fBinCtrlFitChan, 1);
+        fHistCtrlEv2 -> SetBinContent(fBinCtrlFitChan, 0);
         fHistCtrlEv2 -> SetBinContent(fBinCtrlNEEL500, 500);
         fHistCtrlEv2 -> SetBinContent(fBinCtrlNEEL203, 2000);
         fHistCtrlEv2 -> SetMarkerSize(binTextSize);
         fHistCtrlEv2 -> SetMinimum(0);
+        fHistCtrlEv2 -> SetMaximum(3000);
     }
     return (TH2*) fHist2DEvent;
 }
@@ -696,6 +711,7 @@ void ATMicromegas::ExecMouseClickEventOnPad(TVirtualPad *pad, double xOnClick, d
     if (pad==fPadCtrlEv1) ClickedCtrlEv1(xOnClick, yOnClick);
     if (pad==fPadCtrlEv2) ClickedCtrlEv2(xOnClick, yOnClick);
 }
+
 void ATMicromegas::Clicked2DEvent(double xOnClick, double yOnClick)
 {
     if (fHist2DEvent==nullptr)
@@ -849,7 +865,7 @@ void ATMicromegas::ClickedCtrlEv2(double xOnClick, double yOnClick)
         else //if (fEnergyMaxMode==2)
         {
             fEnergyMaxMode = 0;
-            fHistCtrlEv2 -> SetBinContent(fBinCtrlEngyMax, 1);
+            fHistCtrlEv2 -> SetBinContent(fBinCtrlEngyMax, 0);
             lk_info << "Set energy range to 4200" << endl;
         }
     }
