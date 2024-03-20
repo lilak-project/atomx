@@ -22,8 +22,8 @@ class ATMicromegas : public LKEvePlane
     public:
         virtual TPad* Get3DEventPad();
 
-        virtual TH2D* GetHistEventDisplay1(Option_t *option="-1");
-        virtual TH2D* GetHistEventDisplay2(Option_t *option="-1");
+        virtual TH2* GetHistEventDisplay1(Option_t *option="-1");
+        virtual TH2* GetHistEventDisplay2(Option_t *option="-1");
         virtual TH1D* GetHistChannelBuffer();
 
         virtual int FindPadID(int cobo, int asad, int aget, int chan);
@@ -32,6 +32,7 @@ class ATMicromegas : public LKEvePlane
         virtual int FindZFromHistEventDisplay2Bin(int hbin);
 
         virtual void ClickedEventDisplay2(double xOnClick, double yOnClick);
+        virtual void UpdateEventDisplay1();
         virtual void UpdateEventDisplay2();
         virtual void UpdateChannelBuffer();
 

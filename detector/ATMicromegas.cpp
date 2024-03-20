@@ -88,8 +88,19 @@ bool ATMicromegas::Init()
             if (fDefinePositionByPixelIndex) {
                 posz = iz;
                 posx = ix;
+                pad -> SetPosition(posz,posx);
+                pad -> AddPadCorner(iz,ix);
+                pad -> AddPadCorner(iz+1,ix);
+                pad -> AddPadCorner(iz+1,ix+1);
+                pad -> AddPadCorner(iz,ix+1);
             }
-            pad -> SetPosition(posz,posx);
+            else {
+                pad -> SetPosition(posz,posx);
+                pad -> AddPadCorner(iz,ix);
+                pad -> AddPadCorner(iz+fDZPad,ix);
+                pad -> AddPadCorner(iz+fDZPad,ix+fDXPad);
+                pad -> AddPadCorner(iz,ix+fDXPad);
+            }
             fChannelArray -> Add(pad);
         }
     }
@@ -128,7 +139,7 @@ bool ATMicromegas::Init()
     return true;
 }
 
-TH2D* ATMicromegas::GetHistEventDisplay1(Option_t *option)
+TH2* ATMicromegas::GetHistEventDisplay1(Option_t *option)
 {
     if (fHistEventDisplay1==nullptr)
     {
@@ -157,10 +168,10 @@ TH2D* ATMicromegas::GetHistEventDisplay1(Option_t *option)
         }
     }
 
-    return fHistEventDisplay1;
+    return (TH2*) fHistEventDisplay1;
 }
 
-TH2D* ATMicromegas::GetHistEventDisplay2(Option_t *option)
+TH2* ATMicromegas::GetHistEventDisplay2(Option_t *option)
 {
     if (fHistEventDisplay2==nullptr)
     {
@@ -195,7 +206,7 @@ TH2D* ATMicromegas::GetHistEventDisplay2(Option_t *option)
     }
 
 
-    return fHistEventDisplay2;
+    return (TH2*) fHistEventDisplay2;
 }
 
 TH1D* ATMicromegas::GetHistChannelBuffer()
@@ -242,6 +253,13 @@ TPad* ATMicromegas::Get3DEventPad()
     else {
         return (TPad *) nullptr;
     }
+}
+
+
+void ATMicromegas::UpdateEventDisplay1()
+{
+    LKEvePlane::UpdateEventDisplay1();
+    fPadEventDisplay1 -> SetGrid();
 }
 
 void ATMicromegas::UpdateEventDisplay2()
@@ -303,9 +321,9 @@ void ATMicromegas::FillDataToHistEventDisplay2(Option_t *option)
     {
         if (fAccumulateEvents==0) lk_info << "Filling raw data to plane" << endl;
         title = "Raw Data";
-        TIter nextRawData(fChannelArray);
+        TIter nextPad(fChannelArray);
         LKPhysicalPad *pad = nullptr;
-        while (pad = (LKPhysicalPad*) nextRawData())
+        while (pad = (LKPhysicalPad*) nextPad())
         {
             auto iz = pad -> GetI();
             auto ix = pad -> GetJ();
