@@ -2,7 +2,7 @@
 #define ATMICROMEGAS_HH
 
 #include "LKEvePlane.h"
-#include "LKPhysicalPad.h"
+#include "LKPad.h"
 #include "TPad.h"
 
 class ATMicromegas : public LKEvePlane
@@ -27,7 +27,7 @@ class ATMicromegas : public LKEvePlane
         virtual TH1D* GetHistChannelBuffer();
 
         virtual int FindPadID(int cobo, int asad, int aget, int chan);
-        virtual LKPhysicalPad* FindPad(int cobo, int asad, int aget, int chan);
+        virtual LKPad* FindPad(int cobo, int asad, int aget, int chan);
         virtual int FindPadIDFromHistEventDisplay1Bin(int hbin);
         virtual int FindZFromHistEventDisplay2Bin(int hbin);
 

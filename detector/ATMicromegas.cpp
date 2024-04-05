@@ -17,6 +17,7 @@ ATMicromegas::ATMicromegas()
     fAxis3 = LKVector3::kY;
     fAxisDrift = LKVector3::kY;
     fChannelAnalyzer = nullptr;
+    fPaletteNumber = 1;
 }
 
 void ATMicromegas::Clear(Option_t *option)
@@ -77,7 +78,7 @@ bool ATMicromegas::Init()
     for (auto ix=0; ix<fNX; ++ix) {
         for (auto iz=0; iz<fNZ; ++iz) {
             auto padID = iz + ix*fNZ;
-            LKPhysicalPad* pad = new LKPhysicalPad();
+            LKPad* pad = new LKPad();
             pad -> SetPadID(padID);
             pad -> SetPlaneID(0);
             pad -> SetSection(0);
@@ -121,11 +122,11 @@ bool ATMicromegas::Init()
             }
             auto padID = iz + ix*fNZ;
             fMapCAACToPadID[cobo][asad][aget][chan] = padID;
-            auto pad = (LKPhysicalPad*) fChannelArray -> At(padID);
-            pad -> SetCoboID(cobo);
-            pad -> SetAsadID(asad);
-            pad -> SetAgetID(aget);
-            pad -> SetChannelID(chan);
+            auto pad = (LKPad*) fChannelArray -> At(padID);
+            pad -> SetCobo(cobo);
+            pad -> SetAsad(asad);
+            pad -> SetAget(aget);
+            pad -> SetChan(chan);
             ++countMap;
         }
     }
@@ -230,15 +231,15 @@ int ATMicromegas::FindPadID(int cobo, int asad, int aget, int chan)
     return fMapCAACToPadID[cobo][asad][aget][chan];
 }
 
-LKPhysicalPad* ATMicromegas::FindPad(int cobo, int asad, int aget, int chan)
+LKPad* ATMicromegas::FindPad(int cobo, int asad, int aget, int chan)
 {
-    LKPhysicalPad *pad = nullptr;
+    LKPad *pad = nullptr;
     auto padID = fMapCAACToPadID[cobo][asad][aget][chan];
     if (padID>=0) {
-        pad = (LKPhysicalPad*) fChannelArray -> At(padID);
+        pad = (LKPad*) fChannelArray -> At(padID);
         return pad;
     }
-    return (LKPhysicalPad*) nullptr;
+    return (LKPad*) nullptr;
 }
 
 int ATMicromegas::FindPadIDFromHistEventDisplay1Bin(int hbin)
@@ -322,36 +323,36 @@ void ATMicromegas::FillDataToHistEventDisplay2(Option_t *option)
         if (fAccumulateEvents==0) lk_info << "Filling raw data to plane" << endl;
         title = "Raw Data";
         TIter nextPad(fChannelArray);
-        LKPhysicalPad *pad = nullptr;
-        while (pad = (LKPhysicalPad*) nextPad())
+        LKPad *pad = nullptr;
+        while (pad = (LKPad*) nextPad())
         {
             auto iz = pad -> GetI();
             auto ix = pad -> GetJ();
             auto idx = pad -> GetDataIndex();
             if (idx<0)
                 continue;
+
             auto channel = (GETChannel*) fRawDataArray -> At(idx);
             auto buffer = channel -> GetWaveformY();
             auto pedestal = channel -> GetPedestal();
             auto energy = channel -> GetEnergy();
             auto time = channel -> GetTime();
             //if (energy>0||time>0)
-            if (0)
-            {
-                if (energy>100) lk_debug << time << " " << energy << endl;
+            //if (fDefinePositionByPixelIndex)
                 fHistEventDisplay2 -> Fill(iz,time,energy);
-            }
-            else {
+            //else
+            /*
+            {
                 fChannelAnalyzer -> Analyze(buffer);
                 pedestal = fChannelAnalyzer -> GetPedestal();
                 for (auto tb=0; tb<512; ++tb) {
                     auto value = buffer[tb] - pedestal;
                     if (value>fThreshold) {
-                        //if (iz==0) lk_debug << "ix,iz,p,e,t,v: " << ix << " " << iz << " " << pedestal << " " << energy << " " << time << " " << value << endl;
                         fHistEventDisplay2 -> Fill(iz,512-tb,value);
                     }
                 }
             }
+            */
         }
     }
 }
@@ -416,7 +417,7 @@ void ATMicromegas::UpdateChannelBuffer()
         {
             auto padID = iz0 + fNZ*iPad;
             //auto padID = iz + ix*fNZ;
-            auto pad = (LKPhysicalPad*) fChannelArray -> At(padID);
+            auto pad = (LKPad*) fChannelArray -> At(padID);
             auto iz = pad -> GetI();
             auto ix = pad -> GetJ();
             auto idx = pad -> GetDataIndex();
