@@ -1,9 +1,21 @@
 <micoromegas_configs    config_atomx.mac
 
 *LKRun/Tag              eve
-LKEveTask/drawEve3D     true
+LKEveTask/drawEve3D     false
 LKEveTask/drawPlane     true
 
 Hit/markerStyle  20
 Hit/markerSize   1.1
 Hit/markerColor  kBlue
+
+LKHTTrackingTask/mode zy
+#LKHTTrackingTask/binning_x  100, 0,    100
+#LKHTTrackingTask/binning_y  100, -512, 0
+#LKHTTrackingTask/binning_z  100, 0,    100
+LKHTTrackingTask/binning_x  64,  -128,  128
+LKHTTrackingTask/binning_y  100, 0,    -512
+LKHTTrackingTask/binning_z  72,  0,     288
+
+&*LKRun/InputFile /home/ejungwoo/data/atomx/atomx_0141.conv.root
+
+LKEvePlane/fillOption hit
