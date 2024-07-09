@@ -2,9 +2,9 @@
 #define ATOMX_HH
 
 #include "LKLogger.h"
-#include "LKATTPC.h"
+#include "LKDetector.h"
 
-class AToMX : public LKATTPC
+class AToMX : public LKDetector
 {
     public:
         AToMX();

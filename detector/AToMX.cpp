@@ -4,7 +4,7 @@
 ClassImp(AToMX);
 
 AToMX::AToMX()
-    :LKATTPC("atomx","Active target TPC for Multiple nuclear eXperiment")
+    :LKDetector("atomx","Active target TPC for Multiple nuclear eXperiment")
 {
 }
 
