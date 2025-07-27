@@ -1,0 +1,13 @@
+%%%% Beam 34Ar
+Beam
+    Particle= 34Ar
+    Energy= 81.6 MeV 
+    SigmaEnergy= 0 MeV 
+    SigmaThetaX= 0 deg
+    SigmaPhiY= 0 deg
+    SigmaX= 0 mm 
+    SigmaY= 0 mm
+    MeanThetaX= 0 deg 
+    MeanPhiY= 0 deg
+    MeanX= 0 mm 
+    MeanY= 0 mm 

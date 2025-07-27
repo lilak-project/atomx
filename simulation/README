@@ -1,0 +1,13 @@
+geant4 main program and configuration file
+- sim_atomx.cc # will be compiled to sim_atomx.exe at compilation time
+- configure.mac # main configuration file for running lilak-geant4-nptool. read the comments inside
+
+nptool input files
+- #PhysicsListOption.txt # This is read from PhysicsList class
+- nptool_34Ar_alpha_p.reaction # or any other default reaction files can be used
+- nptool_cs_flat.txt # Cross section file. This is coupleed with reaction file
+- #project.config # this doesn't have to contain anything
+
+Geant4 macros:
+- geant4_nptool_vis.mac
+- geant4_vis.mac

@@ -1,0 +1,37 @@
+Beam
+    ZEmission= -500 mm
+    Particle= 1H
+    Energy= 10 MeV
+    SigmaEnergy= 0 MeV
+    SigmaThetaX= 0 MeV
+    SigmaPhiY= 0 deg
+    SigmaX= 0 mm
+    SigmaY= 0 mm
+    MeanThetaX= 0 deg
+    MeanPhiY= 0 deg
+    MeanX= 0 mm
+    MeanY= 0 mm
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+TwoBodyReaction
+    Beam= 1H
+    Target= 12C
+    Light= 1H
+    Heavy= 12C
+    ExcitationEnergyLight= 0.0 MeV
+    #ExcitationEnergyHeavy= 7.65 MeV
+    ExcitationEnergyHeavy= 0 MeV
+    CrossSectionPath= nptool_cs_flat.txt CS
+    ShootLight= 1
+    ShootHeavy= 1
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+ParticleDecay 12C
+    Daughter= 4He 4He 4He
+    ExcitationEnergy= 0 0 0
+    shoot= 1 1 1
+%"Daughter"
+%"Threshold"
+%"ExcitationEnergy"
+%"Shoot"
+%"LifeTime"
+%"BranchingRatio"};
+%"DifferentialCrossSection"

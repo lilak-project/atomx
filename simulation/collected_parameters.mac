@@ -1,0 +1,40 @@
+# collected_parameters.mac created from LKParameterContainer::Print
+
+ATOMX_NPTOOL_DC/ChamberSize   1000., 1000., 1000.  # mm
+ATOMX_NPTOOL_DC/GasFraction   0.97, 0.03  # gas material factction in must add upto 1
+ATOMX_NPTOOL_DC/GasMaterial   "He", "CO2"  # gas material name
+ATOMX_NPTOOL_DC/GasVolumeSize 800., 800., 800.  # mm
+ATOMX_NPTOOL_DC/MMSVolumeSize 600., 220., 600.  # mm
+ATOMX_NPTOOL_DC/PadVolumeSize 600., 2., 600.  # mm
+ATOMX_NPTOOL_DC/Pressure      0.1  # bar
+ATOMX_NPTOOL_DC/ProductionCutElectron   1000  # mm
+ATOMX_NPTOOL_DC/ReactionZ     0, 800.
+ATOMX_NPTOOL_DC/StepLimitInGas          25  # mm
+ATOMX_NPTOOL_DC/Temperature   295  # kelvin
+ATOMX_NPTOOL_DC/WorldSize     2000., 2000., 2000.  # mm
+ATOMX_NPTOOL_DC/mylarRadius   35  # mm
+ATOMX_NPTOOL_DC/mylarThickness          0.007  # mm
+ATOMX_NPTOOL_DC/yPad          350  # mm
+
+LKG4Manager/DetectorCosntruction        ATOMX_NPTOOL_DC
+LKG4Manager/G4CommandFile     geant4_vis.mac
+LKG4Manager/G4OutputFile      data/cssu_atomx_p_12C_p_3a.root
+LKG4Manager/PGAGeneratorFile    # Generator file
+LKG4Manager/RandomSeed        1752476288  # set random seed to root and geant4 random generator. Random seed will be time(0) if this parameter is not set
+LKG4Manager/SensitiveDetectors            # not really used at the moment
+LKG4Manager/SetAutoUpdateCopyNo         true  # If true, manager will automatically assign unique CopyNo of sensitive physical volumes.
+LKG4Manager/SuppressG4InitMessage       true
+LKG4Manager/VisMode           1
+LKG4Manager/WriteTextFile     true
+
+NPTool/Reaction/File          nptool_p_12C_p_3a.reaction
+
+persistency/ATOMXGas          true
+persistency/ATOMXReactionGas  true
+persistency/ATOMXWindow       true
+persistency/MCEdepSum         1
+persistency/MCSecondary       1
+persistency/MCStep            1
+persistency/MCTrackVertex     1
+
+## LKG4Manager/NPToolMode 0 # set true if users are using nptool libraries (not used anymore)
